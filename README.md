@@ -14,7 +14,7 @@
 
 ```
 crawl-nova/
-├── config.ini              # LLM API 配置文件
+├── config.ini              # 配置文件（LLM API、RSSHub、订阅源等）
 ├── rsshub-docker.env       # RSSHub Docker 环境变量
 ├── crawler/
 │   ├── common.py           # 公共配置和 LLM 整理函数
@@ -47,23 +47,24 @@ model = gpt-4o
 
 ### 3. 配置 RSS 源
 
-编辑 `crawler/rss_crawler.py` 中的 `rss_sources`：
+在 `config.ini` 中配置要抓取的账户：
 
-```python
-rss_sources = {
-    "weixin": {
-        "腾讯技术工程": "https://wechat2rss.xlab.app/feed/xxx.xml",
-    },
-    "X": {
-        "karpathy": "http://127.0.0.1:1200/twitter/user/karpathy",
-    },
-    "YouTube": {
-        # "GoogleAI": "https://rsshub.app/youtube/channel/xxx",
-    },
-    "blog": {
-        # "OpenAI_Blog": "https://rsshub.app/openai/blog",
-    },
-}
+```ini
+[rsshub]
+# RSSHub 服务地址
+base_url = http://127.0.0.1:1200
+
+[weixin_accounts]
+# 微信公众号列表
+# 格式：显示名称 = RSS地址
+腾讯技术工程 = https://wechat2rss.xlab.app/feed/xxx.xml
+
+[x_accounts]
+# X (Twitter) 账户列表
+# 格式：显示名称 = 账户ID
+karpathy = karpathy
+OpenAI = OpenAI
+Anthropic = AnthropicAI
 ```
 
 ### 4. 运行
@@ -124,15 +125,33 @@ http://127.0.0.1:1200/twitter/user/{用户名}
 ## 📝 输出示例
 
 ```markdown
-# 🌍 RSS 情报周报 (Automated)
+# 🌍 Data&AI 情报周报 (Automated RSS Crawler)
+
+## 📂 weixin
+
+### 腾讯技术工程
+
+| 日期 | 事件 | 关键信息 | 原文链接 | 详细内容 | 分类 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 2026-01-15 | 鹅厂员工分享AI Coding防坑技巧 | 1. 内容汇集了10位腾讯工程师的实践经验。<br>2. 核心建议包括：使用高质量模型、优先Commit备份等。 | [原文链接](https://mp.weixin.qq.com/s?...) | 文章围绕AI编程实践中的"翻车"经历与防坑技巧展开... | 观点分享 |
+| 2026-01-13 | 腾讯开源AngelSlim工具包 | 1. 腾讯混元团队升级并开源了大模型压缩算法工具包AngelSlim。<br>2. 可使大模型推理速度最高提升1.4-1.9倍。 | [原文链接](https://mp.weixin.qq.com/s?...) | 文章宣布腾讯AngelSlim工具包完成重磅升级... | 技术发布 |
+
+---
 
 ## 📂 X
 
-### karpathy
+### cowork creator
 
-| 日期 | 事件 | 关键信息 | 分类 |
-|------|------|----------|------|
-| 2026-01-17 | 分享 LLM 训练心得 | 1. 推荐使用... | 观点分享 |
+| 日期 | 事件 | 关键信息 | 原文链接 | 详细内容 | 分类 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 2026-01-16 | 发布Cowork多项功能改进与修复 | 1. 新增安全功能：删除操作需用户明确授权。<br>2. 增强文件管理：可在对话中创建文件夹。 | [原文链接](https://x.com/felixrieseberg/...) | More Cowork improvements shipped today! We've taught Claude to always request explicit permission before deleting anything... | 技术发布 |
+| 2026-01-16 | Claude Cowork扩展至Pro订阅用户 | 1. 产品覆盖范围扩大，Pro订阅用户现可使用。 | [原文链接](https://x.com/felixrieseberg/...) | Claude Cowork is now available to Pro subscribers, too! Give it a try and let us know how you'd like to see it improve. | 商业动态 |
+
+### MLflow
+
+| 日期 | 事件 | 关键信息 | 原文链接 | 详细内容 | 分类 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 2026-01-16 | 发布播客，探讨MLflow向GenAI平台转型 | 1. MLflow正在为AI代理和生产系统进行重构。<br>2. 讨论了评估、风险内存管理和治理等挑战。 | [原文链接](https://x.com/MLflow/...) | MLflow isn't just for traditional data scientists anymore. If you're an AI engineer or agent developer building GenAI applications... | 技术发布 |
 
 ---
 ```
