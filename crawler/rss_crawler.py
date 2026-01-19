@@ -59,15 +59,32 @@ def load_x_accounts_from_config():
     
     return x_accounts
 
+def load_youtube_channels_from_config():
+    """
+    从配置文件加载 YouTube 频道列表
+    
+    配置格式：显示名称 = 频道ID (以UC开头)
+    
+    返回：
+        dict: {显示名称: RSS地址}
+    """
+    youtube_channels = {}
+    
+    if config.has_section('youtube_channels'):
+        for display_name in config.options('youtube_channels'):
+            channel_id = config.get('youtube_channels', display_name).strip()
+            if channel_id:
+                youtube_channels[display_name] = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
+    
+    return youtube_channels
+
 # ================= 配置区域 =================
 # 设置 RSSHub 的订阅源 (按来源类型分组)
 # 提示：X (Twitter) 和 YouTube 的路由可以在 https://docs.rsshub.app/ 找到
 rss_sources = {
     "weixin": load_weixin_accounts_from_config(),  # 从配置文件读取微信公众号
     "X": load_x_accounts_from_config(),  # 从配置文件读取 X 账户
-    "YouTube": {
-        # "GoogleAI": "https://rsshub.app/youtube/channel/xxx",
-    },
+    "YouTube": load_youtube_channels_from_config(),  # 从配置文件读取 YouTube 频道
     "blog": {
         # "36Kr_News": "https://rsshub.app/36kr/newsflashes",
         # "OpenAI_Blog": "https://rsshub.app/openai/blog",
@@ -76,7 +93,7 @@ rss_sources = {
 # ===========================================
 
 
-def fetch_recent_posts(rss_url, days, source_type="未知"):
+def fetch_recent_posts(rss_url, days, source_type="未知", name=""):
     """
     抓取 RSS 并筛选指定天数内的内容
     
@@ -84,8 +101,9 @@ def fetch_recent_posts(rss_url, days, source_type="未知"):
         rss_url: RSS 源地址
         days: 抓取最近多少天的内容
         source_type: 来源类型（微信公众号、X (Twitter)、YouTube、博客/新闻等）
+        name: 源名称
     """
-    log(f"正在抓取 [{source_type}]: {rss_url} ...")
+    log(f"正在抓取 [{source_type}] {name}: {rss_url} ...")
     try:
         feed = feedparser.parse(rss_url)
         
@@ -142,7 +160,7 @@ if __name__ == "__main__":
         final_report += f"## 📂 {category}\n\n"
         
         for name, url in sources.items():
-            posts = fetch_recent_posts(url, DAYS_LOOKBACK, source_type=category)
+            posts = fetch_recent_posts(url, DAYS_LOOKBACK, source_type=category, name=name)
             log(f" -> 发现 {len(posts)} 条相关内容，正在整理...")
             
             organized_content = organize_data(posts, name)
