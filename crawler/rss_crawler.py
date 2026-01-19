@@ -12,7 +12,7 @@ import configparser
 import feedparser
 from datetime import datetime, timezone
 from dateutil import parser as date_parser
-from common import organize_data, DAYS_LOOKBACK
+from common import organize_data, DAYS_LOOKBACK, log
 
 # ================= 配置加载 =================
 # 加载配置文件 (config.ini，位于项目根目录)
@@ -85,7 +85,7 @@ def fetch_recent_posts(rss_url, days, source_type="未知"):
         days: 抓取最近多少天的内容
         source_type: 来源类型（微信公众号、X (Twitter)、YouTube、博客/新闻等）
     """
-    print(f"正在抓取 [{source_type}]: {rss_url} ...")
+    log(f"正在抓取 [{source_type}]: {rss_url} ...")
     try:
         feed = feedparser.parse(rss_url)
         recent_posts = []
@@ -98,7 +98,7 @@ def fetch_recent_posts(rss_url, days, source_type="未知"):
             if hasattr(entry, 'published'):
                 post_date = date_parser.parse(entry.published)
             else:
-                print(f"没有时间戳: {entry}")
+                log(f"没有时间戳: {entry}")
                 continue # 没有时间戳跳过
 
             # 确保 post_date 有时区信息，如果没有则设为 UTC
@@ -121,7 +121,7 @@ def fetch_recent_posts(rss_url, days, source_type="未知"):
                 
         return recent_posts
     except Exception as e:
-        print(f"抓取失败: {e}")
+        log(f"抓取失败: {e}")
         return []
 
 
@@ -137,7 +137,7 @@ if __name__ == "__main__":
         
         for name, url in sources.items():
             posts = fetch_recent_posts(url, DAYS_LOOKBACK, source_type=category)
-            print(f" -> 发现 {len(posts)} 条相关内容，正在整理...")
+            log(f" -> 发现 {len(posts)} 条相关内容，正在整理...")
             
             organized_content = organize_data(posts, name)
             
@@ -156,7 +156,7 @@ if __name__ == "__main__":
     with open(report_path, 'w', encoding='utf-8') as f:
         f.write(final_report)
     
-    print(f"\n报告已保存至: {report_path}")
+    log(f"报告已保存至: {report_path}")
     
     # 打印最终报告
     print("\n" + "="*30 + " 最终报告 " + "="*30 + "\n")

@@ -3,10 +3,17 @@ common.py - 公共配置和工具函数
 """
 import os
 import configparser
+from datetime import datetime
 from openai import OpenAI
 
 # 时间范围配置,爬取最近多少天的内容
 DAYS_LOOKBACK = 2
+
+
+def log(message):
+    """带时间戳的日志输出"""
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    print(f"[{timestamp}] {message}")
 
 # 加载配置文件 (config.ini，位于项目根目录)
 config = configparser.ConfigParser()
@@ -73,13 +80,13 @@ def organize_data(posts, source_name):
     # 逐篇处理
     rows = []
     for idx, post in enumerate(posts):
-        print(f"    正在整理{source_name} 第 {idx+1}/{len(posts)} 篇: {post['title'][:30]}...")
+        log(f"    正在整理 [{source_name}] 第 {idx+1}/{len(posts)} 篇: {post['title'][:30]}...")
         try:
             row = organize_single_post(post, source_name)
             if row and row.startswith('|'):
                 rows.append(row)
         except Exception as e:
-            print(f"    整理失败: {e}")
+            log(f"    整理失败: {e}")
             continue
     
     if not rows:
