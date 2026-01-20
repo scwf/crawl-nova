@@ -9,6 +9,7 @@ rss_crawler.py - RSS 订阅抓取工具
 """
 import os
 import json
+import time
 import configparser
 import feedparser
 from datetime import datetime, timezone
@@ -164,6 +165,7 @@ def fetch_recent_posts(rss_url, days, source_type="未知", name="", save_raw=Tr
 
 # ================= 主程序入口 =================
 if __name__ == "__main__":
+    start_time = time.time()
     final_report = "# 🌍 Data&AI 情报周报 (Automated RSS Crawler)\n\n"
     
     for category, sources in rss_sources.items():
@@ -186,7 +188,7 @@ if __name__ == "__main__":
     output_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
     os.makedirs(output_dir, exist_ok=True)
     
-    report_filename = f"rss_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+    report_filename = f"Data&AI_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
     report_path = os.path.join(output_dir, report_filename)
     
     with open(report_path, 'w', encoding='utf-8') as f:
@@ -196,4 +198,8 @@ if __name__ == "__main__":
     
     # 打印最终报告
     print("\n" + "="*30 + " 最终报告 " + "="*30 + "\n")
-    print(final_report)
+    
+    # 打印时间开销
+    elapsed_time = time.time() - start_time
+    print(f"\n{'='*30} 执行完成 {'='*30}")
+    print(f"总耗时: {elapsed_time:.2f} 秒")
