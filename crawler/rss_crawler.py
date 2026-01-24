@@ -14,7 +14,7 @@ import configparser
 import feedparser
 from datetime import datetime, timezone
 from dateutil import parser as date_parser
-from common import organize_data, posts_to_markdown_table, group_posts_by_domain, DAYS_LOOKBACK, log
+from common import organize_data, posts_to_markdown_table, group_posts_by_domain, save_batch_manifest, DAYS_LOOKBACK, log
 
 # ================= 配置加载 =================
 # 加载配置文件 (config.ini，位于项目根目录)
@@ -196,6 +196,7 @@ if __name__ == "__main__":
     
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     saved_files = []
+    domain_report_files = {}  # 用于清单: {领域名称: 文件名}
     
     # 为每个领域生成单独的报告文件
     for domain, posts in grouped_posts.items():
@@ -229,6 +230,7 @@ if __name__ == "__main__":
             f.write(domain_report)
         
         saved_files.append((domain, report_path, len(posts)))
+        domain_report_files[domain] = report_filename  # 记录到清单
         log(f"✅ 领域 [{domain}] 报告已保存: {report_filename} ({len(posts)} 条)")
     
     # 同时生成一份汇总报告（包含所有领域）
@@ -263,6 +265,18 @@ if __name__ == "__main__":
         f.write(combined_report)
     
     log(f"✅ 汇总报告已保存: {combined_filename}")
+    
+    # 保存批次清单文件
+    save_batch_manifest(
+        output_dir=output_dir,
+        batch_id=timestamp,
+        domain_reports=domain_report_files,
+        summary_report=combined_filename,
+        stats={
+            "total_posts": len(all_organized_posts),
+            "domain_count": len(domain_report_files)
+        }
+    )
     
     # 打印执行结果摘要
     print("\n" + "="*50)

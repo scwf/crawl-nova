@@ -10,6 +10,9 @@ from openai import OpenAI
 # 时间范围配置,爬取最近多少天的内容
 DAYS_LOOKBACK = 2
 
+# 批次清单文件名
+MANIFEST_FILENAME = "latest_batch.json"
+
 
 def log(message):
     """带时间戳的日志输出"""
@@ -187,3 +190,90 @@ def group_posts_by_domain(all_posts):
             grouped[domain] = []
         grouped[domain].append(post)
     return grouped
+
+
+# ================= 批次清单管理 =================
+
+def save_batch_manifest(output_dir, batch_id, domain_reports, summary_report=None, stats=None):
+    """
+    保存批次清单文件
+    
+    参数:
+        output_dir: str - 输出目录路径
+        batch_id: str - 批次ID (通常是时间戳，如 20260124_123456)
+        domain_reports: dict - 领域报告映射 {领域名称: 文件名}
+        summary_report: str - 汇总报告文件名 (可选)
+        stats: dict - 统计信息 (可选)
+    
+    返回:
+        str: 清单文件的完整路径
+    """
+    manifest = {
+        "batch_id": batch_id,
+        "created_at": datetime.now().isoformat(),
+        "source": "rss_crawler",
+        "domain_reports": domain_reports,
+    }
+    
+    if summary_report:
+        manifest["summary_report"] = summary_report
+    
+    if stats:
+        manifest["stats"] = stats
+    
+    manifest_path = os.path.join(output_dir, MANIFEST_FILENAME)
+    
+    with open(manifest_path, 'w', encoding='utf-8') as f:
+        json.dump(manifest, f, ensure_ascii=False, indent=2)
+    
+    log(f"批次清单已保存: {MANIFEST_FILENAME}")
+    return manifest_path
+
+
+def load_batch_manifest(data_dir):
+    """
+    加载最新的批次清单
+    
+    参数:
+        data_dir: str - 数据目录路径
+    
+    返回:
+        dict: 清单内容，包含 batch_id, domain_reports 等
+        None: 如果清单文件不存在或解析失败
+    """
+    manifest_path = os.path.join(data_dir, MANIFEST_FILENAME)
+    
+    if not os.path.exists(manifest_path):
+        return None
+    
+    try:
+        with open(manifest_path, 'r', encoding='utf-8') as f:
+            manifest = json.load(f)
+        return manifest
+    except (json.JSONDecodeError, IOError) as e:
+        log(f"读取批次清单失败: {e}")
+        return None
+
+
+def get_domain_report_paths(data_dir, manifest):
+    """
+    从清单中获取领域报告的完整路径
+    
+    参数:
+        data_dir: str - 数据目录路径
+        manifest: dict - 批次清单
+    
+    返回:
+        dict: {领域名称: 完整文件路径}
+    """
+    domain_reports = manifest.get("domain_reports", {})
+    result = {}
+    
+    for domain, filename in domain_reports.items():
+        full_path = os.path.join(data_dir, filename)
+        if os.path.exists(full_path):
+            result[domain] = full_path
+        else:
+            log(f"警告: 领域报告文件不存在: {filename}")
+    
+    return result
