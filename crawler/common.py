@@ -168,6 +168,27 @@ def organize_data(posts, source_name):
     return organized_posts
 
 
+def escape_markdown_table(text):
+    """
+    转义 Markdown 表格中的特殊字符
+    
+    参数:
+        text: str - 需要转义的文本
+    
+    返回:
+        str: 转义后的文本
+    """
+    if not text:
+        return ''
+    # 转换为字符串（防止非字符串类型）
+    text = str(text)
+    # 替换换行符为 <br>
+    text = text.replace('\r\n', '<br>').replace('\n', '<br>').replace('\r', '')
+    # 转义管道符
+    text = text.replace('|', '\\|')
+    return text
+
+
 def posts_to_markdown_table(posts, title=None):
     """
     将文章列表转换为 Markdown 表格格式
@@ -187,18 +208,15 @@ def posts_to_markdown_table(posts, title=None):
     
     rows = []
     for post in posts:
-        # key_info 现在是字符串
-        key_info_str = post.get('key_info', '')
-        
-        # 构建表格行
+        # 构建表格行（对自由文本字段进行转义处理，防止表格显示异常）
         row = "| {date} | {event} | {key_info} | [原文链接]({link}) | {detail} | {category} | {domain} |".format(
-            date=post.get('date', ''),
-            event=post.get('event', ''),
-            key_info=key_info_str,
-            link=post.get('link', ''),
-            detail=post.get('detail', ''),
-            category=post.get('category', ''),
-            domain=post.get('domain', '')
+            date=post.get('date', ''),  # 固定格式 YYYY-MM-DD
+            event=escape_markdown_table(post.get('event', '')),
+            key_info=escape_markdown_table(post.get('key_info', '')),
+            link=post.get('link', ''),  # URL 不转义
+            detail=escape_markdown_table(post.get('detail', '')),
+            category=post.get('category', ''),  # 预定义枚举值
+            domain=post.get('domain', '')  # 预定义枚举值
         )
         rows.append(row)
     
