@@ -1,0 +1,7 @@
+requests
+tqdm
+modelscope
+yt_dlp
+openai
+tenacity
+json_repair

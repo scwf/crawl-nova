@@ -160,23 +160,53 @@ class YouTubeFetcher:
     
     def fetch_transcript(self, video_id: str) -> str:
         """
-        获取视频字幕
+        获取视频字幕，并保存 srt/txt 到 rowdata 目录
         
-        TODO: 后续使用更优方案实现
-        可选方案：
-        - youtube-transcript-api
-        - yt-dlp 提取字幕
-        - Google Cloud Speech-to-Text
-        - Whisper 本地转录
+        使用 video_scribe 模块自动处理（下载+转录）
         
         参数:
             video_id: YouTube视频ID
         
         返回:
-            视频字幕文本，当前返回空字符串（待实现）
+            视频字幕文本
         """
-        # TODO: 待实现
-        return ''
+        import os
+        import sys
+        
+        # 确保能导入 video_scribe
+        # 假设 video_scribe 在项目根目录， content_fetcher.py 在 crawler/ 目录
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(current_dir)
+        if project_root not in sys.path:
+            sys.path.append(project_root)
+            
+        try:
+            from video_scribe.core import process_video
+            
+            # 构造输出目录: data/rowdata/{video_id}/
+            output_dir = os.path.join(project_root, 'data', 'rowdata', video_id)
+            os.makedirs(output_dir, exist_ok=True)
+            
+            video_url = f"https://www.youtube.com/watch?v={video_id}"
+            log(f"    开始转录视频 [ID: {video_id}] -> {output_dir}")
+            
+            # 调用 video_scribe 处理
+            # process_video 会自动保存 .srt, .txt, .json 到 output_dir
+            asr_data = process_video(
+                video_url_or_path=video_url,
+                output_dir=output_dir,
+                device="cuda", # 默认使用CUDA，如果失败 video_scribe 可能会报错，需确保环境
+                language=None  # 自动检测
+            )
+            
+            # 返回纯文本内容
+            return asr_data.to_txt()
+            
+        except Exception as e:
+            log(f"    视频转录失败 [ID: {video_id}]: {e}")
+            import traceback
+            traceback.print_exc()
+            return ''
     
     def fetch(self, url: str) -> Optional[EmbeddedContent]:
         """
