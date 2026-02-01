@@ -204,35 +204,42 @@ class YouTubeFetcher:
             )
             
             # --- LLM 字幕优化 ---
-            # --- LLM 字幕优化 ---
-            logger.info(f"开始优化字幕 [ID: {video_id}]...")
-            api_key = config.get('llm', 'api_key')
-            base_url = config.get('llm', 'base_url')
-            model = config.get('llm', 'model', fallback='deepseek-reasoner')
-            
-            # 使用视频标题/上下文作为背景信息
-            custom_prompt = ""
-            if context:
-                custom_prompt = f"视频背景信息: {context}\n请利用此信息来优化字幕。"
+            final_data = asr_data  # 默认为原始数据
+            try:
+                logger.info(f"开始优化字幕 [ID: {video_id}]...")
+                api_key = config.get('llm', 'api_key')
+                base_url = config.get('llm', 'base_url')
+                model = config.get('llm', 'model', fallback='deepseek-reasoner')
+                
+                # 使用视频标题/上下文作为背景信息
+                custom_prompt = ""
+                if context:
+                    custom_prompt = f"视频背景信息: {context}\n请利用此信息来优化字幕。"
 
-            optimized_data = optimize_subtitle(
-                subtitle_data=asr_data,
-                model=model,
-                api_key=api_key,
-                base_url=base_url,
-                custom_prompt=custom_prompt
-            )
+                optimized_data = optimize_subtitle(
+                    subtitle_data=asr_data,
+                    model=model,
+                    api_key=api_key,
+                    base_url=base_url,
+                    custom_prompt=custom_prompt
+                )
+                
+                # 保存优化后的字幕
+                save_base = os.path.join(output_dir, f"{video_id}_optimized")
+                optimized_data.save(save_base + ".srt")
+                optimized_data.save(save_base + ".txt")
+                
+                final_data = optimized_data
+                
+            except Exception as opt_e:
+                logger.warning(f"字幕优化失败，回退到原始字幕 [ID: {video_id}]: {opt_e}")
+                # 即使优化失败，也继续返回原始字幕
             
-            # 保存优化后的字幕
-            save_base = os.path.join(output_dir, f"{video_id}_optimized")
-            optimized_data.save(save_base + ".srt")
-            optimized_data.save(save_base + ".txt")
-            
-            # 返回优化后的文本
-            return optimized_data.to_txt()
+            # 返回最终文本（优化后或原始）
+            return final_data.to_txt()
             
         except Exception as e:
-            logger.info(f"视频转录失败 [ID: {video_id}]: {e}")
+            logger.error(f"视频转录流程严重失败 [ID: {video_id}]: {e}")
             import traceback
             traceback.print_exc()
             return ''
