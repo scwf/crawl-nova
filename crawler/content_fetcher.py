@@ -367,15 +367,4 @@ class ContentFetcher:
         
         return results, all_urls
     
-    def fetch_youtube_transcript(self, url: str, context: str = "") -> Optional[EmbeddedContent]:
-        """
-        直接获取YouTube视频字幕（用于YouTube RSS源）
-        
-        参数:
-            url: YouTube视频URL
-            context: 视频标题/上下文（可选，用于辅助字幕优化）
-        
-        返回:
-            EmbeddedContent对象，如果获取失败则返回None
-        """
-        return self.youtube_fetcher.fetch(url, context=context)
+

@@ -16,6 +16,10 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 import time
+import re
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from common import organize_data, setup_logger
 
 logger = setup_logger("web_crawler")
@@ -24,66 +28,198 @@ logger = setup_logger("web_crawler")
 # 设置普通 Web URL 抓取源
 # 适用于没有 RSS 的单页面，如具体的一篇博文或静态页面
 web_sources = {
-    # "Qwen_blog": "https://qwen.ai/research",
+    # "databricks_ebook": "https://www.databricks.com/resources/ebook/state-of-ai-agents?utm_source=twitter&utm_medium=organic-social&utm_scid=701Vp00000V6YWcIAN",
+    # "qwen3asr": "https://qwen.ai/blog?id=qwen3asr",
+    # "databricks_hidden_technical_debt_genai_systems": "https://www.databricks.com/blog/hidden-technical-debt-genai-systems",
+    "Qwen_blog": "https://qwen.ai/research",
     # "DeepMind_About": "https://deepmind.google/about/",
 }
 # ===========================================
 
+def _clean_text_content(text):
+    """
+    [Optional] 后处理清洗文本内容
+    移除多余空行、特定的噪音关键词行、Cookie声明等
+    """
+    if not text:
+        return ""
+    
+    # 1. 移除多余空行 (保留段落结构，但去除大片空白)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    
+    lines = text.split('\n')
+    cleaned_lines = []
+    
+    # 定义一些绝对不想看到的噪音关键词 (大小写不敏感)
+    # 注意：只针对短行生效，避免误删正文
+    noise_patterns = [
+        r'^share this post$',
+        r'^contents in this story$',
+        r'^read time:?\s*\d+',
+        r'^\d+\s*min read$',
+        r'^keep up with us$',
+        r'^sign up for.*newsletter',
+        r'^all rights reserved',
+        r'^©\s*\d+',
+        r'^click to share',
+        r'^subscribe to',
+        r'^share on',
+    ]
+    
+    for line in lines:
+        stripped = line.strip()
+        
+        # 跳过空行（后面统一 join）
+        if not stripped:
+            continue
+            
+        # 2. 检查短行噪音 (< 60 chars)
+        if len(stripped) < 60:
+            is_noise = False
+            for pattern in noise_patterns:
+                if re.search(pattern, stripped, re.IGNORECASE):
+                    is_noise = True
+                    break
+            if is_noise:
+                continue
+        
+        # 3. 针对特定的 Cookie/Privacy 声明段落 (长文本特征)
+        lower_line = stripped.lower()
+        if "cookies" in lower_line and "browser" in lower_line and "experience" in lower_line:
+            continue
+        if lower_line.startswith("by submitting") and "privacy policy" in lower_line:
+            continue
+            
+        cleaned_lines.append(stripped)
+        
+    return '\n\n'.join(cleaned_lines)
 
 def fetch_web_content(url):
     """
-    抓取普通网页内容 (使用 Selenium 以支持动态渲染)
+    [Optimized] 抓取普通网页内容
+    
+    改进点：
+    1. 智能等待 (WebDriverWait)
+    2. 模拟滚动 (Lazy Load支持)
+    3. 内容清洗 (移除干扰标签)
+    4. 反爬虫规避优化
     """
-    logger.info(f"正在抓取网页(Selenium): {url} ...")
+    logger.info(f"正在抓取网页(Selenium Optimized): {url} ...")
     driver = None
     try:
         # 配置无头浏览器
         chrome_options = Options()
-        chrome_options.add_argument("--headless")  # 无界面模式
+        chrome_options.add_argument("--headless")
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--window-size=1920,1080")
+        
         # 伪装 User-Agent
-        chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+        chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        
+        # 规避检测
+        chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+        chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        chrome_options.add_experimental_option('useAutomationExtension', False)
 
         service = Service(ChromeDriverManager().install())
         driver = webdriver.Chrome(service=service, options=chrome_options)
         
+        # 进一步规避：移除 navigator.webdriver 标记
+        driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+            "source": """
+            Object.defineProperty(navigator, 'webdriver', {
+              get: () => undefined
+            })
+            """
+        })
+        
         driver.get(url)
-        # 等待页面加载 (简单等待，可改进为 WebDriverWait)
-        time.sleep(5) 
+        
+        # 1. 智能等待：等待 body 可见，最长 15秒
+        try:
+            WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+        except Exception:
+            logger.info("等待页面加载超时，尝试继续处理...")
+
+        # 2. 模拟滚动加载 (复用部分 _prepare_page_for_capture 的精简逻辑)
+        # 快速滚动以触发懒加载文字
+        logger.info("-> 触发滚动加载...")
+        last_height = driver.execute_script("return document.body.scrollHeight")
+        for _ in range(3): # 尝试滚动3次，不像截图那样需要特别精细，只要加载出大部分正文即可
+            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(1.5)
+            new_height = driver.execute_script("return document.body.scrollHeight")
+            if new_height == last_height:
+                break
+            last_height = new_height
         
         # 获取渲染后的 HTML
         html_content = driver.page_source
         soup = BeautifulSoup(html_content, 'html.parser')
         
+        # 3. 内容清洗
+        # 移除干扰元素
+        for tag in soup(['script', 'style', 'nav', 'header', 'footer', 'noscript', 'meta', 'iframe', 'svg', 'select', 'button']):
+            tag.decompose()
+            
+        # 移除常见的广告/侧边栏 class/id
+        bad_selectors = [
+            '.sidebar', '#sidebar', '.ads', '.advertisement', '.social-share', 
+            '.comment-list', '.related-posts', '.menu', '#menu', '.nav', '.navigation'
+        ]
+        for selector in bad_selectors:
+            for tag in soup.select(selector):
+                tag.decompose()
+
         # 提取标题
         title = soup.title.string.strip() if soup.title else url
         
-        # 提取正文 
-        # 策略：优先找 article 标签，其次找主要的 div 类名，最后兜底 p 标签
+        # 4. 优化的提取策略
         content_text = ""
         
-        # 尝试通常的文章容器
-        article = soup.find('article')
-        if article:
-            content_text = article.get_text(strip=True)
+        # 策略A: 查找常见的文章容器 ID/Class
+        article_selectors = [
+            'article', 
+            'main',
+            '[role="main"]',
+            '.post-content', 
+            '.entry-content', 
+            '.article-content',
+            '#content',
+            '.container' 
+        ]
+        
+        target_element = None
+        for selector in article_selectors:
+            found = soup.select(selector)
+            if found:
+                # 如果找到多个，取字数最多的一个
+                target_element = max(found, key=lambda t: len(t.get_text()))
+                logger.info(f"-> 命中选择器提取: {selector}")
+                break
+                
+        if target_element:
+            content_text = target_element.get_text(separator='\n', strip=True)
         else:
-            # 兜底：获取所有 p 标签
+            # 策略B: 兜底 - 提取所有P标签，但进行密度过滤
+            logger.info("-> 使用段落密度回退策略")
             paragraphs = soup.find_all('p')
-            content_text = "\n".join([p.get_text().strip() for p in paragraphs if p.get_text().strip()])
+            # 过滤掉过短的导航性文字 (例如少于 5 个字)
+            valid_paragraphs = [p.get_text().strip() for p in paragraphs if len(p.get_text().strip()) > 5]
+            content_text = "\n".join(valid_paragraphs)
             
-            # 最后的兜底：body
-            if not content_text and soup.body:
-                content_text = soup.body.get_text(strip=True)
+            # 策略C: 如果还是没东西，Last Resort
+        if len(content_text) < 50 and soup.body:
+                content_text = soup.body.get_text(separator='\n', strip=True)
 
-        # DEBUG: 打印抓取到的内容日志
-        # logger.info(f"[DEBUG] Title: {title}")
-        # logger.info(f"[DEBUG] Content Length: {len(content_text)}")
-        # preview = content_text[:200].replace('\n', ' ')
-        # logger.info(f"[DEBUG] Content Preview (first 200 chars): {preview}...")
+        logger.info(f"-> 原始内容长度: {len(content_text)} 字符")
+        
+        # [Optional] 后处理清洗
+        content_text = _clean_text_content(content_text)
+        logger.info(f"-> 清洗后内容长度: {len(content_text)} 字符")
 
-        # 普通网页通常没有统一的 "发布时间" 元数据，这里使用当前抓取时间作为参考
         pub_date = datetime.now().strftime("%Y-%m-%d")
         
         return {
@@ -277,13 +413,13 @@ def capture_web_pdf(url, output_path):
 if __name__ == "__main__":
     final_report = "# 🌐 Web 情报周报 (Automated)\n\n"
     
-    for name, url in web_sources.items():
-        # 生成网页截图或 PDF
-        snapshot_path = f"data/{name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-        capture_web_screenshot_png(url, snapshot_path)
+    # for name, url in web_sources.items():
+    #     # 生成网页截图或 PDF
+    #     snapshot_path = f"data/{name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+    #     capture_web_screenshot_png(url, snapshot_path)
 
-        pdf_path = f"data/{name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-        capture_web_pdf(url, pdf_path)
+    #     pdf_path = f"data/{name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    #     capture_web_pdf(url, pdf_path)
 
     for name, url in web_sources.items():
         post = fetch_web_content(url)
