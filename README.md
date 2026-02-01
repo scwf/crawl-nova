@@ -6,6 +6,8 @@
 
 - **多源 RSS 抓取**：支持微信公众号、X (Twitter)、YouTube、博客/新闻等多种来源
 - **智能分类**：按来源类型自动分组整理
+- **深度内容解析**：自动提取推文或文章中的博客链接和 YouTube 视频，进行递归抓取
+- **视频智能转录**：集成 Whisper 模型将视频转换为文本，并使用 DeepSeek/LLM 基于上下文进行字幕优化
 - **LLM 智能整理**：调用大模型 API 对抓取内容进行结构化总结
 - **Markdown 报告**：自动生成格式清晰的 Markdown 周报
 - **灵活配置**：支持自定义 LLM API、时间范围、RSS 源等
@@ -18,9 +20,14 @@ crawl-nova/
 ├── rsshub-docker.env       # RSSHub Docker 环境变量
 ├── crawler/
 │   ├── common.py           # 公共配置和 LLM 整理函数
-│   ├── rss_crawler.py      # RSS 信息抓取
-│   └── web_crawler.py      # Web 页面抓取 + 截图/PDF
-├── data/                   # 输出目录（报告、截图等）
+│   ├── rss_crawler.py      # RSS 信息抓取（主入口）
+│   ├── web_crawler.py      # Web 页面抓取 + 截图/PDF
+│   └── content_fetcher.py  # 深度内容提取与嵌入资源处理
+├── video_scribe/           # 视频转录与字幕优化模块
+│   ├── core.py             # 转录核心逻辑
+│   ├── optimize.py         # LLM 字幕优化与对齐
+│   └── run_video_scribe.py # 独立运行脚本
+├── data/                   # 输出目录（报告、截图、转录文件等）
 └── README.md
 ```
 
@@ -118,6 +125,39 @@ python rss_crawler.py
 
 ---
 
+## 🎥 视频转录与深度解析
+
+Crawl Nova 内置了强大的 `video_scribe` 模块，能够对抓取内容进行深度挖掘：
+
+### 1. 自动 Video Scribe
+当爬虫在推文或文章中发现 YouTube 链接时，会自动触发以下流程：
+1.  **自动下载**：提取音频流（无需下载完整视频）。
+2.  **Whisper 转录**：使用 `faster-whisper` 模型（支持 GPU 加速）将音频转为字幕。
+3.  **Context 感知优化**：利用推文/文章的原始文本作为**上下文 (Context)**，指导 LLM（如 DeepSeek）优化字幕。
+    *   *例如：推文中提到了 "Pythagorean theorem"，LLM 会利用此信息修正字幕中识别错误的数学术语。*
+    *   同时去除口语赘述（um, uh, I mean），生成如同文章般流畅的文本。
+
+### 2. 深度链接提取
+除了视频，爬虫还会自动识别并递归抓取文中嵌入的博客链接：
+- 自动过滤社交媒体自身的无关链接
+- 使用 Selenium 动态渲染目标网页
+- 提取正文内容并合并到情报报告中
+
+### 3. 独立使用 Video Scribe
+你也可以单独使用该模块来处理本地文件或 URL：
+
+```bash
+# 进入 video_scribe 目录
+cd video_scribe
+
+# 运行工具
+python run_video_scribe.py
+```
+
+> **依赖说明**：`video_scribe` 首次运行时会自动下载所需的依赖文件（如 `faster-whisper` 程序和模型），无需手动配置。Windows 用户请确保已安装 GPU 驱动以获得最佳性能。
+
+---
+
 ## 🐦 使用 RSSHub 抓取 X (Twitter)
 
 X 需要通过自建 RSSHub 服务来抓取，以下是配置步骤：
@@ -171,27 +211,26 @@ http://127.0.0.1:1200/twitter/user/{用户名}
 
 ### 腾讯技术工程
 
-| 日期 | 事件 | 关键信息 | 原文链接 | 详细内容 | 分类 |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| 2026-01-15 | 鹅厂员工分享AI Coding防坑技巧 | 1. 内容汇集了10位腾讯工程师的实践经验。<br>2. 核心建议包括：使用高质量模型、优先Commit备份等。 | [原文链接](https://mp.weixin.qq.com/s?...) | 文章围绕AI编程实践中的"翻车"经历与防坑技巧展开... | 观点分享 |
-| 2026-01-13 | 腾讯开源AngelSlim工具包 | 1. 腾讯混元团队升级并开源了大模型压缩算法工具包AngelSlim。<br>2. 可使大模型推理速度最高提升1.4-1.9倍。 | [原文链接](https://mp.weixin.qq.com/s?...) | 文章宣布腾讯AngelSlim工具包完成重磅升级... | 技术发布 |
+| 日期 | 事件 | 关键信息 | 原文链接 | 详细内容 | 补充内容 | 外部链接 | 事件分类 | 所属领域 |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 2026-01-15 | 鹅厂员工分享AI Coding防坑技巧 | 1. 内容汇集了10位腾讯工程师的实践经验。<br>2. 核心建议包括：使用高质量模型、优先Commit备份等。 | [原文链接](https://mp.weixin.qq.com/s?...) | 文章围绕AI编程实践中的"翻车"经历与防坑技巧展开... | - | - | 观点分享 | 代码智能体（IDE） |
+| 2026-01-13 | 腾讯开源AngelSlim工具包 | 1. 腾讯混元团队升级并开源了大模型压缩算法工具包AngelSlim。<br>2. 可使大模型推理速度最高提升1.4-1.9倍。 | [原文链接](https://mp.weixin.qq.com/s?...) | 文章宣布腾讯AngelSlim工具包完成重磅升级... | - | - | 技术发布 | 大模型技术和产品 |
 
 ---
 
 ## 📂 X
 
-### cowork creator
+### AI Researcher (Andrej)
 
-| 日期 | 事件 | 关键信息 | 原文链接 | 详细内容 | 分类 |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| 2026-01-16 | 发布Cowork多项功能改进与修复 | 1. 新增安全功能：删除操作需用户明确授权。<br>2. 增强文件管理：可在对话中创建文件夹。 | [原文链接](https://x.com/felixrieseberg/...) | More Cowork improvements shipped today! We've taught Claude to always request explicit permission before deleting anything... | 技术发布 |
-| 2026-01-16 | Claude Cowork扩展至Pro订阅用户 | 1. 产品覆盖范围扩大，Pro订阅用户现可使用。 | [原文链接](https://x.com/felixrieseberg/...) | Claude Cowork is now available to Pro subscribers, too! Give it a try and let us know how you'd like to see it improve. | 商业动态 |
+| 日期 | 事件 | 关键信息 | 原文链接 | 详细内容 | 补充内容 | 外部链接 | 事件分类 | 所属领域 |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 2026-02-01 | 解析 LLM 训练新范式 | 1. 视频核心观点：SFT 数据质量比数量更重要。<br>2. 深度抓取：博客文章详细论述了 "Token 效率"。<br>3. 提到未来趋势是小模型 + 高质量数据。 | [原文链接](https://x.com/karpathy/...) | Andrej 深入分析了当前大模型训练中 SFT 阶段的数据策略... | **[视频解析]** Andrej 在视频中详细解释了... (基于 Video Scribe 转录)<br>**[博客摘要]** 随附文章深入探讨了... | [karpathy.ai](https://karpathy.ai) | 深度观点 | 大模型技术和产品 |
 
 ### MLflow
 
-| 日期 | 事件 | 关键信息 | 原文链接 | 详细内容 | 分类 |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| 2026-01-16 | 发布播客，探讨MLflow向GenAI平台转型 | 1. MLflow正在为AI代理和生产系统进行重构。<br>2. 讨论了评估、风险内存管理和治理等挑战。 | [原文链接](https://x.com/MLflow/...) | MLflow isn't just for traditional data scientists anymore. If you're an AI engineer or agent developer building GenAI applications... | 技术发布 |
+| 日期 | 事件 | 关键信息 | 原文链接 | 详细内容 | 补充内容 | 外部链接 | 事件分类 | 所属领域 |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 2026-01-16 | 发布播客，探讨MLflow向GenAI平台转型 | 1. 视频内容：MLflow 团队讨论了向 AI Agent 平台的演进。<br>2. 关键挑战：评估(Evaluation)和治理(Governance)是目前企业落地的痛点。 | [原文链接](https://x.com/MLflow/...) | MLflow 团队发布了一期新的播客节目，专注于探讨... | **[视频智能转录]** 播客中详细讨论了...<br>MLflow isn't just for traditional data scientists anymore... | - | 技术发布 | AI平台和框架 |
 
 ---
 ```
