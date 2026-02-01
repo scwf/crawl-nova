@@ -92,7 +92,7 @@ def _clean_text_content(text):
             
         cleaned_lines.append(stripped)
         
-    return '\n\n'.join(cleaned_lines)
+    return '\n'.join(cleaned_lines)
 
 def fetch_web_content(url):
     """
@@ -424,9 +424,8 @@ if __name__ == "__main__":
     for name, url in web_sources.items():
         post = fetch_web_content(url)
         if post: # 只有抓取成功才处理
-            logger.info(f"-> 成功获取网页内容，正在整理...")
-            organized_content = organize_data([post], name)
-            final_report += f"## 来源：{name} (Web)\n{organized_content}\n\n---\n\n"
+            logger.info(f"-> 成功获取网页内容")
+            final_report += f"## 来源：{name} (Web)\n{post}\n\n---\n\n"
     
     # 打印最终报告
     logger.info("\n" + "="*30 + " 最终报告 " + "="*30)

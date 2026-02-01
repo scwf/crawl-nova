@@ -7,8 +7,82 @@ from .downloader import download_audio
 from .asr.factory import create_asr
 from .utils import setup_logger
 from .resource_manager import ensure_executable, ensure_model
+import glob
+import webvtt
+import json
 
 logger = setup_logger("core")
+
+
+def parse_vtt_to_asr_data(vtt_path: str) -> ASRData:
+    """Parse a WebVTT file into an ASRData object."""
+    segments = []
+    text_content = []
+    
+    for caption in webvtt.read(vtt_path):
+        # Convert timestamp strings to seconds (float)
+        # WebVTT typical format: 00:00:01.500
+        start_seconds = sum(x * float(t) for x, t in zip([3600, 60, 1], caption.start.split(":")))
+        end_seconds = sum(x * float(t) for x, t in zip([3600, 60, 1], caption.end.split(":")))
+        
+        text = caption.text.strip().replace('\n', ' ')
+        if not text:
+            continue
+            
+        segments.append({
+            "start": start_seconds,
+            "end": end_seconds,
+            "text": text
+        })
+        text_content.append(text)
+        
+    return ASRData(
+        text=" ".join(text_content),
+        chunks=segments
+    )
+
+def try_download_youtube_subtitles(url: str, output_dir: str, lang: str = "en") -> Optional[str]:
+    """
+    Try to download YouTube subtitles using yt-dlp.
+    Returns path to the downloaded subtitle file (vtt) if successful, else None.
+    """
+    import subprocess
+    
+    # Clean output dir patterns first to avoid confusion with old files
+    base_pattern = os.path.join(output_dir, "ytsub_temp.*")
+    for f in glob.glob(base_pattern):
+        try: os.remove(f)
+        except: pass
+        
+    output_template = os.path.join(output_dir, "ytsub_temp.%(ext)s")
+    
+    # Try manual subs first, then auto-subs
+    # We use 'vtt' format as it's standard and easy to parse
+    cmd = [
+        "yt-dlp",
+        "--skip-download",   # Don't download video
+        "--write-subs",      # Try manual subs
+        "--write-auto-subs", # Fallback to auto subs
+        "--sub-lang", lang,  # Language code
+        "--sub-format", "vtt", # Enforce vtt
+        "--output", output_template,
+        url
+    ]
+    
+    try:
+        logger.info(f"Attempting to download subtitles for {url} ({lang})...")
+        subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        
+        # Check if file exists
+        # yt-dlp might name it ytsub_temp.en.vtt or similar
+        potential_files = glob.glob(os.path.join(output_dir, "ytsub_temp.*.vtt"))
+        if potential_files:
+            return potential_files[0]
+            
+    except Exception as e:
+        logger.warning(f"Failed to download subtitles: {e}")
+    
+    return None
 
 def process_video(
     video_url_or_path: str, 
@@ -31,6 +105,39 @@ def process_video(
     
     logger.info(f"Using Executable: {exe_path}")
     logger.info(f"Using Model: {final_model_path}")
+
+    # Step 0.5: Try to get existing YouTube subtitles (Optimization)
+    if not os.path.exists(video_url_or_path):
+        target_lang = language if language else "en"
+        vtt_path = try_download_youtube_subtitles(video_url_or_path, output_dir, target_lang)
+        
+        if vtt_path:
+            logger.info("Found YouTube subtitles! Skipping audio transcription.")
+            try:
+                asr_data = parse_vtt_to_asr_data(vtt_path)
+                
+                # We still need a base name for export
+                # Since we didn't download video, we use the video ID or a generic name
+                # Try to extract video ID from URL simple way
+                from urllib.parse import urlparse, parse_qs
+                parsed_url = urlparse(video_url_or_path)
+                video_id = parse_qs(parsed_url.query).get('v', ['video'])[0]
+                
+                # Export immediately
+                output_base = os.path.join(output_dir, video_id)
+                asr_data.save(output_base + ".srt")
+                asr_data.save(output_base + ".txt")
+                asr_data.save(output_base + ".json")
+                
+                # Cleanup temp vtt
+                try: os.remove(vtt_path)
+                except: pass
+                
+                logger.info("Done (using existing subtitles)!")
+                return asr_data
+                
+            except Exception as e:
+                logger.warning(f"Failed to parse downloaded subtitles: {e}. Falling back to standard transcription.")
 
     # 1. Download or Use Local
     if os.path.exists(video_url_or_path):

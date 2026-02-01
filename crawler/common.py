@@ -10,7 +10,7 @@ from datetime import datetime
 from openai import OpenAI
 
 # 时间范围配置,爬取最近多少天的内容
-DAYS_LOOKBACK = 1
+DAYS_LOOKBACK = 7
 
 # 批次清单文件名
 MANIFEST_FILENAME = "latest_batch.json"
