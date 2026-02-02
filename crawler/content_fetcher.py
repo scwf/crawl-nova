@@ -23,7 +23,7 @@ logger = setup_logger("content_fetcher")
 class EmbeddedContent:
     """嵌入内容数据结构"""
     url: str
-    content_type: str  # 'blog' | 'youtube'
+    content_type: str  # 'blog' | 'subtitle'
     title: str = ''
     content: str = ''
     metadata: Dict = field(default_factory=dict)
@@ -35,6 +35,7 @@ def _shorten_url(url: str, length: int = 60) -> str:
     return url[:length] + "..." if len(url) > length else url
 
 
+
 class LinkExtractor:
     """从文本中提取和分类URL"""
     
@@ -44,8 +45,12 @@ class LinkExtractor:
     # YouTube相关域名
     YOUTUBE_DOMAINS = ['youtube.com', 'youtu.be', 'www.youtube.com', 'm.youtube.com']
     
+    # 通用视频域名/扩展名
+    VIDEO_DOMAINS = ['video.twimg.com']
+    VIDEO_EXTENSIONS = ['.mp4', '.mov', '.webm', '.mkv']
+    
     # 媒体资源域名（图片、视频等）
-    MEDIA_DOMAINS = ['twimg.com', 'pbs.twimg.com', 'video.twimg.com']
+    MEDIA_DOMAINS = ['twimg.com', 'pbs.twimg.com']
     
     @staticmethod
     def extract_urls(text: str) -> List[str]:
@@ -80,94 +85,117 @@ class LinkExtractor:
     @classmethod
     def categorize(cls, text: str) -> Tuple[List[str], List[str], List[str]]:
         """
-        分类提取博客链接、YouTube链接和媒体链接
+        分类提取博客链接、视频链接（含YouTube）和媒体链接
         
         参数:
             text: 要解析的文本内容
         
         返回:
-            (blog_links, youtube_links, media_urls) 三元组
+            (blog_links, video_links, media_urls) 三元组
         """
         urls = cls.extract_urls(text)
         blog_links = []
-        youtube_links = []
+        video_links = []
         media_urls = []
         
         for url in urls:
             parsed = urlparse(url)
             domain = parsed.netloc.lower()
+            path = parsed.path.lower()
             
-            # 检查是否为YouTube链接
-            if any(yt in domain for yt in cls.YOUTUBE_DOMAINS):
-                youtube_links.append(url)
-            # 检查是否为媒体资源链接（图片、视频）
+            # 1. 视频链接 (YouTube 或 通用视频)
+            is_youtube = any(yt in domain for yt in cls.YOUTUBE_DOMAINS)
+            is_generic_video = (
+                any(v in domain for v in cls.VIDEO_DOMAINS) or 
+                any(path.endswith(ext) for ext in cls.VIDEO_EXTENSIONS)
+            )
+            
+            if is_youtube or is_generic_video:
+                video_links.append(url)
+            
+            # 2. 其他媒体资源链接（图片等）
             elif any(media in domain for media in cls.MEDIA_DOMAINS):
                 media_urls.append(url)
-            # 检查是否需要跳过（社交媒体自身链接）
+            
+            # 3. 博客/网页链接 (排除跳过的域名)
             elif domain and not any(skip in domain for skip in cls.SKIP_DOMAINS):
                 blog_links.append(url)
         
-        return blog_links, youtube_links, media_urls
+        return blog_links, video_links, media_urls
 
 
-class YouTubeFetcher:
-    """YouTube视频信息获取器"""
+
+class GenericVideoFetcher:
+    """通用视频信息获取器 (支持YouTube, Twitter视频等)"""
     
-    @staticmethod
-    def extract_video_id(url: str) -> Optional[str]:
+    def _parse_video_info(self, url: str) -> Tuple[Optional[str], str]:
         """
-        从URL提取视频ID
-        
-        支持的URL格式:
-        - https://www.youtube.com/watch?v=VIDEO_ID
-        - https://youtu.be/VIDEO_ID
-        - https://www.youtube.com/embed/VIDEO_ID
-        - https://m.youtube.com/watch?v=VIDEO_ID
-        
-        参数:
-            url: YouTube视频URL
+        解析视频信息
         
         返回:
-            视频ID，如果无法提取则返回None
+            (video_id, video_url)
+            - video_id: 用于文件存储的唯一标识
+            - video_url: 用于下载的实际URL
         """
         if not url:
-            return None
+            return None, ""
+            
+        parsed = urlparse(url)
+        domain = parsed.netloc.lower()
         
-        try:
-            parsed = urlparse(url)
-            
-            # 处理 youtu.be 短链接
-            if 'youtu.be' in parsed.netloc:
-                # 路径格式: /VIDEO_ID 或 /VIDEO_ID?params
-                video_id = parsed.path.lstrip('/').split('?')[0]
-                return video_id if video_id else None
-            
-            # 处理 youtube.com 标准链接
-            if 'youtube.com' in parsed.netloc:
-                # 检查 /watch?v=VIDEO_ID 格式
-                if '/watch' in parsed.path:
-                    query_params = parse_qs(parsed.query)
-                    video_ids = query_params.get('v', [])
-                    return video_ids[0] if video_ids else None
+        # === 策略1: YouTube ===
+        if any(d in domain for d in ['youtube.com', 'youtu.be']):
+            # copy from original extra_video_id logic
+            try:
+                # youtu.be/ID
+                if 'youtu.be' in domain:
+                    vid = parsed.path.lstrip('/').split('?')[0]
+                    if vid: return vid, f"https://www.youtube.com/watch?v={vid}"
+                    
+                # youtube.com/watch?v=ID
+                if 'youtube.com' in domain:
+                    if '/watch' in parsed.path:
+                        query = parse_qs(parsed.query)
+                        vids = query.get('v', [])
+                        if vids: return vids[0], f"https://www.youtube.com/watch?v={vids[0]}"
+                    if '/embed/' in parsed.path:
+                        parts = parsed.path.split('/embed/')
+                        if len(parts) > 1:
+                            vid = parts[1].split('/')[0].split('?')[0]
+                            return vid, f"https://www.youtube.com/watch?v={vid}"
+            except:
+                pass
                 
-                # 检查 /embed/VIDEO_ID 格式
-                if '/embed/' in parsed.path:
-                    parts = parsed.path.split('/embed/')
-                    if len(parts) > 1:
-                        return parts[1].split('/')[0].split('?')[0]
-            
-            return None
-        except Exception:
-            return None
-    
-    def fetch_transcript(self, video_id: str, context: str = "") -> str:
+        # === 策略2: 通用视频 (基于文件名或哈希) ===
+        # 使用URL路径最后一部分作为文件名基础，如果太长或非法则hash
+        try:
+            filename = os.path.basename(parsed.path)
+            if not filename or '.' not in filename:
+                # 如果没有明确文件名，使用整个URL的hash
+                import hashlib
+                video_id = hashlib.md5(url.encode()).hexdigest()[:12]
+            else:
+                # 清理文件名
+                name_part = os.path.splitext(filename)[0]
+                safe_name = "".join(c if c.isalnum() else '_' for c in name_part)
+                # 加上hash前缀防止重名
+                import hashlib
+                url_hash = hashlib.md5(url.encode()).hexdigest()[:6]
+                video_id = f"{safe_name}_{url_hash}"
+                
+            return video_id, url
+        except:
+            return None, ""
+
+    def fetch_transcript(self, video_id: str, video_url: str, context: str = "") -> str:
         """
         获取视频字幕，并保存 srt/txt 到 raw 目录
         
         使用 video_scribe 模块自动处理（下载+转录）
         
         参数:
-            video_id: YouTube视频ID
+            video_id: 视频ID (也是目录名)
+            video_url: 视频可下载链接
         
         返回:
             视频字幕文本
@@ -183,13 +211,10 @@ class YouTubeFetcher:
             sys.path.append(project_root)
             
         try:
-            from video_scribe.core import process_video
-            
             # 构造输出目录: data/raw/{video_id}/
             output_dir = os.path.join(project_root, 'data', 'raw', video_id)
             os.makedirs(output_dir, exist_ok=True)
             
-            video_url = f"https://www.youtube.com/watch?v={video_id}"
             logger.info(f"开始转录视频 [ID: {video_id}] -> {output_dir}")
             
             # 调用 video_scribe 处理
@@ -246,27 +271,27 @@ class YouTubeFetcher:
     
     def fetch(self, url: str, context: str = "") -> Optional[EmbeddedContent]:
         """
-        获取YouTube视频的完整信息
+        获取视频的完整信息
         
         参数:
-            url: YouTube视频URL
+            url: 视频URL
         
         返回:
             EmbeddedContent对象，如果无法提取则返回None
         """
-        video_id = self.extract_video_id(url)
+        video_id, video_url = self._parse_video_info(url)
         if not video_id:
-            logger.info(f"无法从URL提取视频ID: {_shorten_url(url)}")
+            logger.info(f"无法解析视频信息: {_shorten_url(url)}")
             return None
         
-        transcript = self.fetch_transcript(video_id, context=context)
+        transcript = self.fetch_transcript(video_id, video_url, context=context)
         
         return EmbeddedContent(
             url=url,
-            content_type='youtube',
+            content_type='subtitle',
             title='',  # 可后续扩展获取标题
             content=transcript,
-            metadata={'video_id': video_id}
+            metadata={'video_id': video_id, 'video_url': video_url}
         )
 
 
@@ -327,7 +352,7 @@ class ContentFetcher:
     """
     
     def __init__(self):
-        self.youtube_fetcher = YouTubeFetcher()
+        self.video_fetcher = GenericVideoFetcher()
         self.blog_fetcher = BlogFetcher()
     
     def fetch_embedded_content(self, text: str) -> Tuple[List[EmbeddedContent], List[str]]:
@@ -346,18 +371,18 @@ class ContentFetcher:
             return [], []
         
         # 提取并分类URL
-        blog_links, youtube_links, media_urls = LinkExtractor.categorize(text)
+        blog_links, video_links, media_urls = LinkExtractor.categorize(text)
         results = []
         
-        # 处理YouTube链接
-        for url in youtube_links:
+        # 处理视频链接 (YouTube + Generic)
+        for url in video_links:
             try:
-                logger.info(f"正在获取YouTube内容: {_shorten_url(url)}")
-                content = self.youtube_fetcher.fetch(url)
+                logger.info(f"正在获取视频内容: {_shorten_url(url)}")
+                content = self.video_fetcher.fetch(url)
                 if content:
                     results.append(content)
             except Exception as e:
-                logger.info(f"YouTube内容获取失败 [{_shorten_url(url)}]: {e}")
+                logger.info(f"视频内容获取失败 [{_shorten_url(url)}]: {e}")
         
         # 处理博客链接
         for url in blog_links:
@@ -370,7 +395,7 @@ class ContentFetcher:
                 logger.info(f"博客内容获取失败 [{_shorten_url(url)}]: {e}")
         
         # 合并所有外部资源链接（博客、YouTube、媒体）
-        all_urls = blog_links + youtube_links + media_urls
+        all_urls = blog_links + video_links + media_urls
         
         return results, all_urls
     

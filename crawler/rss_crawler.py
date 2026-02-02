@@ -17,7 +17,7 @@ from dateutil import parser as date_parser
 from common import organize_data, posts_to_markdown_table, group_posts_by_domain, save_batch_manifest, DAYS_LOOKBACK, setup_logger
 
 logger = setup_logger("rss_crawler")
-from content_fetcher import ContentFetcher, YouTubeFetcher
+from content_fetcher import ContentFetcher
 
 # ================= 配置加载 =================
 # 加载配置文件 (config.ini，位于项目根目录)
@@ -99,7 +99,6 @@ rss_sources = {
 # ================= 内容增强模块 =================
 # 用于从X推文中提取嵌入链接内容，以及从YouTube视频中提取字幕
 content_fetcher = ContentFetcher()
-youtube_fetcher = YouTubeFetcher()
 # ===========================================
 
 
@@ -141,7 +140,8 @@ def _enrich_youtube_content(link, title, context=""):
     try:
         # 传递 title 和 context 到 fetch，context 用作补充信息
         full_context = f"{title}\n{context}" if context else title
-        yt = youtube_fetcher.fetch(link, context=full_context)
+        # 使用 content_fetcher.video_fetcher
+        yt = content_fetcher.video_fetcher.fetch(link, context=full_context)
         if yt and yt.content:
             logger.info(f"提取到字幕: {len(yt.content)} 字符")
             return yt.content

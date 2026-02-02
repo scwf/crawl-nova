@@ -46,6 +46,10 @@ def try_download_youtube_subtitles(url: str, output_dir: str, lang: str = "en") 
     Try to download YouTube subtitles using yt-dlp.
     Returns path to the downloaded subtitle file (vtt) if successful, else None.
     """
+    # Guard: Only attempt for YouTube URLs
+    if not any(domain in url for domain in ['youtube.com', 'youtu.be']):
+        return None
+        
     import subprocess
     
     # Clean output dir patterns first to avoid confusion with old files
