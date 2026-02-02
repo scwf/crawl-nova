@@ -1,0 +1,2055 @@
+1
+00:00:01,000 --> 00:00:01,000
+What's going on everybody? Welcome back
+
+2
+00:00:01,000 --> 00:00:03,000
+What's going on everybody? Welcome back to another video. Today we're going to
+
+3
+00:00:03,000 --> 00:00:03,000
+to another video. Today we're going to
+
+4
+00:00:03,000 --> 00:00:04,000
+to another video. Today we're going to be talking about IDP and data [music]
+
+5
+00:00:04,000 --> 00:00:04,000
+be talking about IDP and data [music]
+
+6
+00:00:04,000 --> 00:00:11,000
+be talking about IDP and data [music] bricks.
+
+7
+00:00:13,000 --> 00:00:13,000
+Now, as a data analyst, I spend a lot of
+
+8
+00:00:13,000 --> 00:00:14,000
+Now, as a data analyst, I spend a lot of my time on data collection. So, that's
+
+9
+00:00:14,000 --> 00:00:14,000
+my time on data collection. So, that's
+
+10
+00:00:14,000 --> 00:00:16,000
+my time on data collection. So, that's going to be getting the data into a
+
+11
+00:00:16,000 --> 00:00:16,000
+going to be getting the data into a
+
+12
+00:00:16,000 --> 00:00:18,000
+going to be getting the data into a usable format for other teams. And a lot
+
+13
+00:00:18,000 --> 00:00:18,000
+usable format for other teams. And a lot
+
+14
+00:00:18,000 --> 00:00:20,000
+usable format for other teams. And a lot of the times it's just in a CSV or it's
+
+15
+00:00:20,000 --> 00:00:20,000
+of the times it's just in a CSV or it's
+
+16
+00:00:20,000 --> 00:00:22,000
+of the times it's just in a CSV or it's in a database. It's really easy to use,
+
+17
+00:00:22,000 --> 00:00:22,000
+in a database. It's really easy to use,
+
+18
+00:00:22,000 --> 00:00:25,000
+in a database. It's really easy to use, but it isn't always the case. In fact, a
+
+19
+00:00:25,000 --> 00:00:25,000
+but it isn't always the case. In fact, a
+
+20
+00:00:25,000 --> 00:00:27,000
+but it isn't always the case. In fact, a lot of the data that I used to work with
+
+21
+00:00:27,000 --> 00:00:27,000
+lot of the data that I used to work with
+
+22
+00:00:27,000 --> 00:00:28,000
+lot of the data that I used to work with was in unstructured formats.
+
+23
+00:00:28,000 --> 00:00:28,000
+was in unstructured formats.
+
+24
+00:00:28,000 --> 00:00:30,000
+was in unstructured formats. Specifically, this was in healthcare
+
+25
+00:00:30,000 --> 00:00:30,000
+Specifically, this was in healthcare
+
+26
+00:00:30,000 --> 00:00:31,000
+Specifically, this was in healthcare when we were working directly with
+
+27
+00:00:31,000 --> 00:00:31,000
+when we were working directly with
+
+28
+00:00:31,000 --> 00:00:32,000
+when we were working directly with hospitals. And so, we would get doctor's
+
+29
+00:00:32,000 --> 00:00:32,000
+hospitals. And so, we would get doctor's
+
+30
+00:00:32,000 --> 00:00:34,000
+hospitals. And so, we would get doctor's notes, we would get clinician notes, we
+
+31
+00:00:34,000 --> 00:00:34,000
+notes, we would get clinician notes, we
+
+32
+00:00:34,000 --> 00:00:35,000
+notes, we would get clinician notes, we would get claims documents, and that
+
+33
+00:00:35,000 --> 00:00:35,000
+would get claims documents, and that
+
+34
+00:00:35,000 --> 00:00:37,000
+would get claims documents, and that data is not formatted in columns and
+
+35
+00:00:37,000 --> 00:00:37,000
+data is not formatted in columns and
+
+36
+00:00:37,000 --> 00:00:39,000
+data is not formatted in columns and rows. It's just free text. And I'm old
+
+37
+00:00:39,000 --> 00:00:39,000
+rows. It's just free text. And I'm old
+
+38
+00:00:39,000 --> 00:00:41,000
+rows. It's just free text. And I'm old enough to remember we would use OCR to
+
+39
+00:00:41,000 --> 00:00:41,000
+enough to remember we would use OCR to
+
+40
+00:00:41,000 --> 00:00:43,000
+enough to remember we would use OCR to extract all this data and make it usable
+
+41
+00:00:43,000 --> 00:00:43,000
+extract all this data and make it usable
+
+42
+00:00:43,000 --> 00:00:45,000
+extract all this data and make it usable and put it into columns and rows. That
+
+43
+00:00:45,000 --> 00:00:46,000
+and put it into columns and rows. That
+
+44
+00:00:46,000 --> 00:00:47,000
+and put it into columns and rows. That process was very difficult, filled with
+
+45
+00:00:47,000 --> 00:00:47,000
+process was very difficult, filled with
+
+46
+00:00:47,000 --> 00:00:48,000
+process was very difficult, filled with a ton of rules and things that would
+
+47
+00:00:48,000 --> 00:00:48,000
+a ton of rules and things that would
+
+48
+00:00:48,000 --> 00:00:51,000
+a ton of rules and things that would break down a lot, but I don't think
+
+49
+00:00:51,000 --> 00:00:51,000
+break down a lot, but I don't think
+
+50
+00:00:51,000 --> 00:00:52,000
+break down a lot, but I don't think that's the way that you should be doing
+
+51
+00:00:52,000 --> 00:00:52,000
+that's the way that you should be doing
+
+52
+00:00:52,000 --> 00:00:55,000
+that's the way that you should be doing it anymore. In fact, I've been using IDP
+
+53
+00:00:55,000 --> 00:00:55,000
+it anymore. In fact, I've been using IDP
+
+54
+00:00:55,000 --> 00:00:57,000
+it anymore. In fact, I've been using IDP in data bricks and it is amazing. So,
+
+55
+00:00:57,000 --> 00:00:57,000
+in data bricks and it is amazing. So,
+
+56
+00:00:57,000 --> 00:00:59,000
+in data bricks and it is amazing. So, let's dive into IDP and see what it is
+
+57
+00:00:59,000 --> 00:00:59,000
+let's dive into IDP and see what it is
+
+58
+00:00:59,000 --> 00:01:01,000
+let's dive into IDP and see what it is and why it is so useful. The first thing
+
+59
+00:01:01,000 --> 00:01:01,000
+and why it is so useful. The first thing
+
+60
+00:01:01,000 --> 00:01:03,000
+and why it is so useful. The first thing to look at is just what IDP actually is.
+
+61
+00:01:03,000 --> 00:01:03,000
+to look at is just what IDP actually is.
+
+62
+00:01:03,000 --> 00:01:05,000
+to look at is just what IDP actually is. It stands for intelligent document
+
+63
+00:01:05,000 --> 00:01:05,000
+It stands for intelligent document
+
+64
+00:01:05,000 --> 00:01:07,000
+It stands for intelligent document processing. It just uses AI to extract
+
+65
+00:01:07,000 --> 00:01:07,000
+processing. It just uses AI to extract
+
+66
+00:01:07,000 --> 00:01:09,000
+processing. It just uses AI to extract data and information from your
+
+67
+00:01:09,000 --> 00:01:09,000
+data and information from your
+
+68
+00:01:09,000 --> 00:01:11,000
+data and information from your documents. And I'm sure a lot of you
+
+69
+00:01:11,000 --> 00:01:11,000
+documents. And I'm sure a lot of you
+
+70
+00:01:11,000 --> 00:01:13,000
+documents. And I'm sure a lot of you guys have actually tried this at some
+
+71
+00:01:13,000 --> 00:01:13,000
+guys have actually tried this at some
+
+72
+00:01:13,000 --> 00:01:15,000
+guys have actually tried this at some point. You just pop it into Chat GBT.
+
+73
+00:01:15,000 --> 00:01:15,000
+point. You just pop it into Chat GBT.
+
+74
+00:01:15,000 --> 00:01:16,000
+point. You just pop it into Chat GBT. You say, "Hey, tell me what this
+
+75
+00:01:16,000 --> 00:01:16,000
+You say, "Hey, tell me what this
+
+76
+00:01:16,000 --> 00:01:18,000
+You say, "Hey, tell me what this document says." And it gives you kind of
+
+77
+00:01:18,000 --> 00:01:18,000
+document says." And it gives you kind of
+
+78
+00:01:18,000 --> 00:01:20,000
+document says." And it gives you kind of a right answer. I've done that myself.
+
+79
+00:01:20,000 --> 00:01:20,000
+a right answer. I've done that myself.
+
+80
+00:01:20,000 --> 00:01:22,000
+a right answer. I've done that myself. And for the most part, it's okay, but
+
+81
+00:01:22,000 --> 00:01:22,000
+And for the most part, it's okay, but
+
+82
+00:01:22,000 --> 00:01:23,000
+And for the most part, it's okay, but it's not amazing. You can even see here
+
+83
+00:01:23,000 --> 00:01:23,000
+it's not amazing. You can even see here
+
+84
+00:01:23,000 --> 00:01:25,000
+it's not amazing. You can even see here on the lefth hand side, this is a
+
+85
+00:01:25,000 --> 00:01:25,000
+on the lefth hand side, this is a
+
+86
+00:01:25,000 --> 00:01:27,000
+on the lefth hand side, this is a benchmark test for this type of process.
+
+87
+00:01:27,000 --> 00:01:27,000
+benchmark test for this type of process.
+
+88
+00:01:27,000 --> 00:01:28,000
+benchmark test for this type of process. This is going to be accuracy versus
+
+89
+00:01:28,000 --> 00:01:28,000
+This is going to be accuracy versus
+
+90
+00:01:28,000 --> 00:01:30,000
+This is going to be accuracy versus pricing. And you can see cha JBT way on
+
+91
+00:01:30,000 --> 00:01:30,000
+pricing. And you can see cha JBT way on
+
+92
+00:01:30,000 --> 00:01:32,000
+pricing. And you can see cha JBT way on the right hand side. It's going to be
+
+93
+00:01:32,000 --> 00:01:32,000
+the right hand side. It's going to be
+
+94
+00:01:32,000 --> 00:01:35,000
+the right hand side. It's going to be quite expensive for just okay accuracy
+
+95
+00:01:35,000 --> 00:01:35,000
+quite expensive for just okay accuracy
+
+96
+00:01:35,000 --> 00:01:37,000
+quite expensive for just okay accuracy right around 76 77%. You'll notice
+
+97
+00:01:37,000 --> 00:01:37,000
+right around 76 77%. You'll notice
+
+98
+00:01:37,000 --> 00:01:39,000
+right around 76 77%. You'll notice though data bricks is in the top left
+
+99
+00:01:39,000 --> 00:01:40,000
+though data bricks is in the top left
+
+100
+00:01:40,000 --> 00:01:41,000
+though data bricks is in the top left which is kind of exactly where you want
+
+101
+00:01:41,000 --> 00:01:41,000
+which is kind of exactly where you want
+
+102
+00:01:41,000 --> 00:01:42,000
+which is kind of exactly where you want to be. You want it to be the most
+
+103
+00:01:42,000 --> 00:01:42,000
+to be. You want it to be the most
+
+104
+00:01:42,000 --> 00:01:45,000
+to be. You want it to be the most accurate for the lowest price and data
+
+105
+00:01:45,000 --> 00:01:45,000
+accurate for the lowest price and data
+
+106
+00:01:45,000 --> 00:01:47,000
+accurate for the lowest price and data bicks does that. Now why does IDP matter
+
+107
+00:01:47,000 --> 00:01:47,000
+bicks does that. Now why does IDP matter
+
+108
+00:01:47,000 --> 00:01:49,000
+bicks does that. Now why does IDP matter at all? And this goes back to the exact
+
+109
+00:01:49,000 --> 00:01:49,000
+at all? And this goes back to the exact
+
+110
+00:01:49,000 --> 00:01:50,000
+at all? And this goes back to the exact thing I was talking about at the very
+
+111
+00:01:50,000 --> 00:01:50,000
+thing I was talking about at the very
+
+112
+00:01:50,000 --> 00:01:53,000
+thing I was talking about at the very beginning, which is a lot of data is not
+
+113
+00:01:53,000 --> 00:01:53,000
+beginning, which is a lot of data is not
+
+114
+00:01:53,000 --> 00:01:55,000
+beginning, which is a lot of data is not actually stored in databases and columns
+
+115
+00:01:55,000 --> 00:01:55,000
+actually stored in databases and columns
+
+116
+00:01:55,000 --> 00:01:56,000
+actually stored in databases and columns and rows. It's just free text. It's
+
+117
+00:01:56,000 --> 00:01:56,000
+and rows. It's just free text. It's
+
+118
+00:01:56,000 --> 00:01:59,000
+and rows. It's just free text. It's unstructured data. There is a ton of
+
+119
+00:01:59,000 --> 00:01:59,000
+unstructured data. There is a ton of
+
+120
+00:01:59,000 --> 00:02:00,000
+unstructured data. There is a ton of really important data in these
+
+121
+00:02:00,000 --> 00:02:00,000
+really important data in these
+
+122
+00:02:00,000 --> 00:02:02,000
+really important data in these unstructured data types and just these
+
+123
+00:02:02,000 --> 00:02:02,000
+unstructured data types and just these
+
+124
+00:02:02,000 --> 00:02:03,000
+unstructured data types and just these free text and documents that are sitting
+
+125
+00:02:03,000 --> 00:02:03,000
+free text and documents that are sitting
+
+126
+00:02:03,000 --> 00:02:05,000
+free text and documents that are sitting out there that people want to be able to
+
+127
+00:02:05,000 --> 00:02:05,000
+out there that people want to be able to
+
+128
+00:02:05,000 --> 00:02:07,000
+out there that people want to be able to use, but they just can't in its current
+
+129
+00:02:07,000 --> 00:02:07,000
+use, but they just can't in its current
+
+130
+00:02:07,000 --> 00:02:09,000
+use, but they just can't in its current state. Something that makes IDP really
+
+131
+00:02:09,000 --> 00:02:10,000
+state. Something that makes IDP really
+
+132
+00:02:10,000 --> 00:02:12,000
+state. Something that makes IDP really useful is that it is taking into context
+
+133
+00:02:12,000 --> 00:02:12,000
+useful is that it is taking into context
+
+134
+00:02:12,000 --> 00:02:14,000
+useful is that it is taking into context the document that you're processing. So,
+
+135
+00:02:14,000 --> 00:02:14,000
+the document that you're processing. So,
+
+136
+00:02:14,000 --> 00:02:17,000
+the document that you're processing. So, it isn't fully rules-based, which OCR
+
+137
+00:02:17,000 --> 00:02:17,000
+it isn't fully rules-based, which OCR
+
+138
+00:02:17,000 --> 00:02:18,000
+it isn't fully rules-based, which OCR pretty much was. When I was back on my
+
+139
+00:02:18,000 --> 00:02:18,000
+pretty much was. When I was back on my
+
+140
+00:02:18,000 --> 00:02:20,000
+pretty much was. When I was back on my data collection team, we had a lot of
+
+141
+00:02:20,000 --> 00:02:20,000
+data collection team, we had a lot of
+
+142
+00:02:20,000 --> 00:02:22,000
+data collection team, we had a lot of pipelines that had OCR in it. And I
+
+143
+00:02:22,000 --> 00:02:22,000
+pipelines that had OCR in it. And I
+
+144
+00:02:22,000 --> 00:02:24,000
+pipelines that had OCR in it. And I would say at least once a week, they
+
+145
+00:02:24,000 --> 00:02:24,000
+would say at least once a week, they
+
+146
+00:02:24,000 --> 00:02:25,000
+would say at least once a week, they would break. They would just break down
+
+147
+00:02:25,000 --> 00:02:25,000
+would break. They would just break down
+
+148
+00:02:25,000 --> 00:02:27,000
+would break. They would just break down because the structure changed or
+
+149
+00:02:27,000 --> 00:02:27,000
+because the structure changed or
+
+150
+00:02:27,000 --> 00:02:28,000
+because the structure changed or something changed in the documents or
+
+151
+00:02:28,000 --> 00:02:28,000
+something changed in the documents or
+
+152
+00:02:28,000 --> 00:02:30,000
+something changed in the documents or the document file type changed. It just
+
+153
+00:02:30,000 --> 00:02:30,000
+the document file type changed. It just
+
+154
+00:02:30,000 --> 00:02:32,000
+the document file type changed. It just would happen all the time. This is what
+
+155
+00:02:32,000 --> 00:02:32,000
+would happen all the time. This is what
+
+156
+00:02:32,000 --> 00:02:34,000
+would happen all the time. This is what makes IDP really powerful because it
+
+157
+00:02:34,000 --> 00:02:34,000
+makes IDP really powerful because it
+
+158
+00:02:34,000 --> 00:02:36,000
+makes IDP really powerful because it isn't completely rules-based like OCR
+
+159
+00:02:36,000 --> 00:02:36,000
+isn't completely rules-based like OCR
+
+160
+00:02:36,000 --> 00:02:38,000
+isn't completely rules-based like OCR was because if anything changed within
+
+161
+00:02:38,000 --> 00:02:38,000
+was because if anything changed within
+
+162
+00:02:38,000 --> 00:02:40,000
+was because if anything changed within that document, it just broke. it just
+
+163
+00:02:40,000 --> 00:02:40,000
+that document, it just broke. it just
+
+164
+00:02:40,000 --> 00:02:42,000
+that document, it just broke. it just immediately stopped working and it was
+
+165
+00:02:42,000 --> 00:02:42,000
+immediately stopped working and it was
+
+166
+00:02:42,000 --> 00:02:43,000
+immediately stopped working and it was horrible and we had to fix things all
+
+167
+00:02:43,000 --> 00:02:43,000
+horrible and we had to fix things all
+
+168
+00:02:43,000 --> 00:02:45,000
+horrible and we had to fix things all the time. But with IDP, it's really
+
+169
+00:02:45,000 --> 00:02:45,000
+the time. But with IDP, it's really
+
+170
+00:02:45,000 --> 00:02:47,000
+the time. But with IDP, it's really flexible to the document that you're
+
+171
+00:02:47,000 --> 00:02:47,000
+flexible to the document that you're
+
+172
+00:02:47,000 --> 00:02:48,000
+flexible to the document that you're actually using. For example, on this
+
+173
+00:02:48,000 --> 00:02:48,000
+actually using. For example, on this
+
+174
+00:02:48,000 --> 00:02:50,000
+actually using. For example, on this right hand side, this is just a PDF
+
+175
+00:02:50,000 --> 00:02:50,000
+right hand side, this is just a PDF
+
+176
+00:02:50,000 --> 00:02:51,000
+right hand side, this is just a PDF document. This is some image that
+
+177
+00:02:51,000 --> 00:02:52,000
+document. This is some image that
+
+178
+00:02:52,000 --> 00:02:53,000
+document. This is some image that somebody put out there, but it isn't
+
+179
+00:02:53,000 --> 00:02:53,000
+somebody put out there, but it isn't
+
+180
+00:02:53,000 --> 00:02:55,000
+somebody put out there, but it isn't sitting in columns and rows. There's
+
+181
+00:02:55,000 --> 00:02:55,000
+sitting in columns and rows. There's
+
+182
+00:02:55,000 --> 00:02:57,000
+sitting in columns and rows. There's free text on the lefthand side. There's
+
+183
+00:02:57,000 --> 00:02:57,000
+free text on the lefthand side. There's
+
+184
+00:02:57,000 --> 00:03:00,000
+free text on the lefthand side. There's columns and rows on the right hand side.
+
+185
+00:03:00,000 --> 00:03:00,000
+columns and rows on the right hand side.
+
+186
+00:03:00,000 --> 00:03:02,000
+columns and rows on the right hand side. Now, this data might be really useful
+
+187
+00:03:02,000 --> 00:03:02,000
+Now, this data might be really useful
+
+188
+00:03:02,000 --> 00:03:04,000
+Now, this data might be really useful that you want to extract even the data
+
+189
+00:03:04,000 --> 00:03:04,000
+that you want to extract even the data
+
+190
+00:03:04,000 --> 00:03:06,000
+that you want to extract even the data in the free text on the lefth hand side.
+
+191
+00:03:06,000 --> 00:03:06,000
+in the free text on the lefth hand side.
+
+192
+00:03:06,000 --> 00:03:08,000
+in the free text on the lefth hand side. With IDP, you'll be able to write pretty
+
+193
+00:03:08,000 --> 00:03:08,000
+With IDP, you'll be able to write pretty
+
+194
+00:03:08,000 --> 00:03:10,000
+With IDP, you'll be able to write pretty simple code to extract the data in the
+
+195
+00:03:10,000 --> 00:03:10,000
+simple code to extract the data in the
+
+196
+00:03:10,000 --> 00:03:12,000
+simple code to extract the data in the free text. And it's very easy to extract
+
+197
+00:03:12,000 --> 00:03:12,000
+free text. And it's very easy to extract
+
+198
+00:03:12,000 --> 00:03:14,000
+free text. And it's very easy to extract the data on the right hand side. And if
+
+199
+00:03:14,000 --> 00:03:14,000
+the data on the right hand side. And if
+
+200
+00:03:14,000 --> 00:03:16,000
+the data on the right hand side. And if things change, maybe they flip sides or
+
+201
+00:03:16,000 --> 00:03:16,000
+things change, maybe they flip sides or
+
+202
+00:03:16,000 --> 00:03:18,000
+things change, maybe they flip sides or more data is added or there's more free
+
+203
+00:03:18,000 --> 00:03:18,000
+more data is added or there's more free
+
+204
+00:03:18,000 --> 00:03:20,000
+more data is added or there's more free text on the lefth hand side, it's still
+
+205
+00:03:20,000 --> 00:03:20,000
+text on the lefth hand side, it's still
+
+206
+00:03:20,000 --> 00:03:21,000
+text on the lefth hand side, it's still going to be really flexible with that
+
+207
+00:03:21,000 --> 00:03:21,000
+going to be really flexible with that
+
+208
+00:03:21,000 --> 00:03:23,000
+going to be really flexible with that data type. And in future lessons, we are
+
+209
+00:03:23,000 --> 00:03:23,000
+data type. And in future lessons, we are
+
+210
+00:03:23,000 --> 00:03:25,000
+data type. And in future lessons, we are going to deep dive into this. I'm going
+
+211
+00:03:25,000 --> 00:03:25,000
+going to deep dive into this. I'm going
+
+212
+00:03:25,000 --> 00:03:27,000
+going to deep dive into this. I'm going to actually show you how to extract data
+
+213
+00:03:27,000 --> 00:03:27,000
+to actually show you how to extract data
+
+214
+00:03:27,000 --> 00:03:28,000
+to actually show you how to extract data just like this. So, let's take a look at
+
+215
+00:03:28,000 --> 00:03:28,000
+just like this. So, let's take a look at
+
+216
+00:03:28,000 --> 00:03:29,000
+just like this. So, let's take a look at the difference between traditional
+
+217
+00:03:29,000 --> 00:03:30,000
+the difference between traditional
+
+218
+00:03:30,000 --> 00:03:32,000
+the difference between traditional processing and IDP. Now, traditional
+
+219
+00:03:32,000 --> 00:03:32,000
+processing and IDP. Now, traditional
+
+220
+00:03:32,000 --> 00:03:34,000
+processing and IDP. Now, traditional processing is the one that I kind of
+
+221
+00:03:34,000 --> 00:03:34,000
+processing is the one that I kind of
+
+222
+00:03:34,000 --> 00:03:36,000
+processing is the one that I kind of grew up with or the one that I've used
+
+223
+00:03:36,000 --> 00:03:36,000
+grew up with or the one that I've used
+
+224
+00:03:36,000 --> 00:03:37,000
+grew up with or the one that I've used the most because this is just what we
+
+225
+00:03:37,000 --> 00:03:38,000
+the most because this is just what we
+
+226
+00:03:38,000 --> 00:03:39,000
+the most because this is just what we had when we were doing this type of
+
+227
+00:03:39,000 --> 00:03:39,000
+had when we were doing this type of
+
+228
+00:03:39,000 --> 00:03:41,000
+had when we were doing this type of work. This is going to be using OCR,
+
+229
+00:03:41,000 --> 00:03:41,000
+work. This is going to be using OCR,
+
+230
+00:03:41,000 --> 00:03:42,000
+work. This is going to be using OCR, which stands for optical character
+
+231
+00:03:42,000 --> 00:03:42,000
+which stands for optical character
+
+232
+00:03:42,000 --> 00:03:44,000
+which stands for optical character recognition. This is what I used and
+
+233
+00:03:44,000 --> 00:03:44,000
+recognition. This is what I used and
+
+234
+00:03:44,000 --> 00:03:46,000
+recognition. This is what I used and basically everybody else used for
+
+235
+00:03:46,000 --> 00:03:46,000
+basically everybody else used for
+
+236
+00:03:46,000 --> 00:03:48,000
+basically everybody else used for unstructured data. And you would set
+
+237
+00:03:48,000 --> 00:03:48,000
+unstructured data. And you would set
+
+238
+00:03:48,000 --> 00:03:50,000
+unstructured data. And you would set custom rules for each document that you
+
+239
+00:03:50,000 --> 00:03:50,000
+custom rules for each document that you
+
+240
+00:03:50,000 --> 00:03:51,000
+custom rules for each document that you were working with. There were so many
+
+241
+00:03:51,000 --> 00:03:51,000
+were working with. There were so many
+
+242
+00:03:51,000 --> 00:03:53,000
+were working with. There were so many different tools and templates that you
+
+243
+00:03:53,000 --> 00:03:53,000
+different tools and templates that you
+
+244
+00:03:53,000 --> 00:03:55,000
+different tools and templates that you can use, and those were really helpful.
+
+245
+00:03:55,000 --> 00:03:55,000
+can use, and those were really helpful.
+
+246
+00:03:55,000 --> 00:03:57,000
+can use, and those were really helpful. But again, things would break fairly
+
+247
+00:03:57,000 --> 00:03:57,000
+But again, things would break fairly
+
+248
+00:03:57,000 --> 00:03:59,000
+But again, things would break fairly easily, and so it was a lot of
+
+249
+00:03:59,000 --> 00:03:59,000
+easily, and so it was a lot of
+
+250
+00:03:59,000 --> 00:04:00,000
+easily, and so it was a lot of maintenance to actually keep up with
+
+251
+00:04:00,000 --> 00:04:00,000
+maintenance to actually keep up with
+
+252
+00:04:00,000 --> 00:04:02,000
+maintenance to actually keep up with these pipelines. The most frustrating
+
+253
+00:04:02,000 --> 00:04:02,000
+these pipelines. The most frustrating
+
+254
+00:04:02,000 --> 00:04:04,000
+these pipelines. The most frustrating thing about using this was when a
+
+255
+00:04:04,000 --> 00:04:04,000
+thing about using this was when a
+
+256
+00:04:04,000 --> 00:04:05,000
+thing about using this was when a customer would not tell you that they're
+
+257
+00:04:05,000 --> 00:04:05,000
+customer would not tell you that they're
+
+258
+00:04:05,000 --> 00:04:08,000
+customer would not tell you that they're going to be changing a format to a PDF
+
+259
+00:04:08,000 --> 00:04:08,000
+going to be changing a format to a PDF
+
+260
+00:04:08,000 --> 00:04:09,000
+going to be changing a format to a PDF or whatever document they were sending
+
+261
+00:04:09,000 --> 00:04:09,000
+or whatever document they were sending
+
+262
+00:04:09,000 --> 00:04:11,000
+or whatever document they were sending you. They would just change it and you
+
+263
+00:04:11,000 --> 00:04:11,000
+you. They would just change it and you
+
+264
+00:04:11,000 --> 00:04:12,000
+you. They would just change it and you wouldn't find out until like a week
+
+265
+00:04:12,000 --> 00:04:12,000
+wouldn't find out until like a week
+
+266
+00:04:12,000 --> 00:04:14,000
+wouldn't find out until like a week later or 2 weeks later when the data
+
+267
+00:04:14,000 --> 00:04:14,000
+later or 2 weeks later when the data
+
+268
+00:04:14,000 --> 00:04:16,000
+later or 2 weeks later when the data just wasn't coming in anymore. Now, it
+
+269
+00:04:16,000 --> 00:04:16,000
+just wasn't coming in anymore. Now, it
+
+270
+00:04:16,000 --> 00:04:18,000
+just wasn't coming in anymore. Now, it was still worth maintaining. It was
+
+271
+00:04:18,000 --> 00:04:18,000
+was still worth maintaining. It was
+
+272
+00:04:18,000 --> 00:04:20,000
+was still worth maintaining. It was still worth using those OCR systems
+
+273
+00:04:20,000 --> 00:04:20,000
+still worth using those OCR systems
+
+274
+00:04:20,000 --> 00:04:21,000
+still worth using those OCR systems because we would get a lot of really
+
+275
+00:04:21,000 --> 00:04:21,000
+because we would get a lot of really
+
+276
+00:04:21,000 --> 00:04:24,000
+because we would get a lot of really good data out of it, but it wasn't 100%
+
+277
+00:04:24,000 --> 00:04:24,000
+good data out of it, but it wasn't 100%
+
+278
+00:04:24,000 --> 00:04:26,000
+good data out of it, but it wasn't 100% accurate. We had several data quality
+
+279
+00:04:26,000 --> 00:04:26,000
+accurate. We had several data quality
+
+280
+00:04:26,000 --> 00:04:27,000
+accurate. We had several data quality analysts who would be on our team who
+
+281
+00:04:27,000 --> 00:04:27,000
+analysts who would be on our team who
+
+282
+00:04:27,000 --> 00:04:29,000
+analysts who would be on our team who would manually check a lot of these
+
+283
+00:04:29,000 --> 00:04:29,000
+would manually check a lot of these
+
+284
+00:04:29,000 --> 00:04:31,000
+would manually check a lot of these things and run tons of queries and tons
+
+285
+00:04:31,000 --> 00:04:31,000
+things and run tons of queries and tons
+
+286
+00:04:31,000 --> 00:04:33,000
+things and run tons of queries and tons of code to make sure that the data is
+
+287
+00:04:33,000 --> 00:04:33,000
+of code to make sure that the data is
+
+288
+00:04:33,000 --> 00:04:34,000
+of code to make sure that the data is really accurate. Traditional processing
+
+289
+00:04:34,000 --> 00:04:34,000
+really accurate. Traditional processing
+
+290
+00:04:34,000 --> 00:04:37,000
+really accurate. Traditional processing with OCR is not a bad system. It's just
+
+291
+00:04:37,000 --> 00:04:37,000
+with OCR is not a bad system. It's just
+
+292
+00:04:37,000 --> 00:04:39,000
+with OCR is not a bad system. It's just a lot of work. Now with IDP, we're going
+
+293
+00:04:39,000 --> 00:04:39,000
+a lot of work. Now with IDP, we're going
+
+294
+00:04:39,000 --> 00:04:41,000
+a lot of work. Now with IDP, we're going to be using an AI agent-based system. So
+
+295
+00:04:41,000 --> 00:04:41,000
+to be using an AI agent-based system. So
+
+296
+00:04:41,000 --> 00:04:43,000
+to be using an AI agent-based system. So when it processes your document, it's
+
+297
+00:04:43,000 --> 00:04:43,000
+when it processes your document, it's
+
+298
+00:04:43,000 --> 00:04:45,000
+when it processes your document, it's going to understand the layout and the
+
+299
+00:04:45,000 --> 00:04:45,000
+going to understand the layout and the
+
+300
+00:04:45,000 --> 00:04:46,000
+going to understand the layout and the context of your document without you
+
+301
+00:04:46,000 --> 00:04:46,000
+context of your document without you
+
+302
+00:04:46,000 --> 00:04:48,000
+context of your document without you having to create the rules for it. One
+
+303
+00:04:48,000 --> 00:04:48,000
+having to create the rules for it. One
+
+304
+00:04:48,000 --> 00:04:49,000
+having to create the rules for it. One of the best things about this is just
+
+305
+00:04:49,000 --> 00:04:49,000
+of the best things about this is just
+
+306
+00:04:49,000 --> 00:04:51,000
+of the best things about this is just that it doesn't break very easily. It's
+
+307
+00:04:51,000 --> 00:04:51,000
+that it doesn't break very easily. It's
+
+308
+00:04:51,000 --> 00:04:54,000
+that it doesn't break very easily. It's really hard because it's so flexible.
+
+309
+00:04:54,000 --> 00:04:54,000
+really hard because it's so flexible.
+
+310
+00:04:54,000 --> 00:04:55,000
+really hard because it's so flexible. it's really hard to actually get it to
+
+311
+00:04:55,000 --> 00:04:55,000
+it's really hard to actually get it to
+
+312
+00:04:55,000 --> 00:04:57,000
+it's really hard to actually get it to break. So with traditional OCR, if you
+
+313
+00:04:57,000 --> 00:04:57,000
+break. So with traditional OCR, if you
+
+314
+00:04:57,000 --> 00:05:00,000
+break. So with traditional OCR, if you change it from a PDF into like a DOCX or
+
+315
+00:05:00,000 --> 00:05:00,000
+change it from a PDF into like a DOCX or
+
+316
+00:05:00,000 --> 00:05:02,000
+change it from a PDF into like a DOCX or just a Word document, it's going to
+
+317
+00:05:02,000 --> 00:05:02,000
+just a Word document, it's going to
+
+318
+00:05:02,000 --> 00:05:03,000
+just a Word document, it's going to break, right? It's looking for a
+
+319
+00:05:03,000 --> 00:05:03,000
+break, right? It's looking for a
+
+320
+00:05:03,000 --> 00:05:06,000
+break, right? It's looking for a specific file type. But with IDP, it's
+
+321
+00:05:06,000 --> 00:05:06,000
+specific file type. But with IDP, it's
+
+322
+00:05:06,000 --> 00:05:08,000
+specific file type. But with IDP, it's just going to really easily, flexibly
+
+323
+00:05:08,000 --> 00:05:08,000
+just going to really easily, flexibly
+
+324
+00:05:08,000 --> 00:05:10,000
+just going to really easily, flexibly change from one document type to
+
+325
+00:05:10,000 --> 00:05:10,000
+change from one document type to
+
+326
+00:05:10,000 --> 00:05:12,000
+change from one document type to another. IDP has a ton of built-in
+
+327
+00:05:12,000 --> 00:05:12,000
+another. IDP has a ton of built-in
+
+328
+00:05:12,000 --> 00:05:13,000
+another. IDP has a ton of built-in functions, and those are what we're
+
+329
+00:05:13,000 --> 00:05:13,000
+functions, and those are what we're
+
+330
+00:05:13,000 --> 00:05:14,000
+functions, and those are what we're going to be looking at in the next
+
+331
+00:05:14,000 --> 00:05:14,000
+going to be looking at in the next
+
+332
+00:05:14,000 --> 00:05:16,000
+going to be looking at in the next several lessons. They have a bunch of
+
+333
+00:05:16,000 --> 00:05:16,000
+several lessons. They have a bunch of
+
+334
+00:05:16,000 --> 00:05:18,000
+several lessons. They have a bunch of built-in functions that do a lot of the
+
+335
+00:05:18,000 --> 00:05:18,000
+built-in functions that do a lot of the
+
+336
+00:05:18,000 --> 00:05:20,000
+built-in functions that do a lot of the heavy lifting for you. You basically
+
+337
+00:05:20,000 --> 00:05:20,000
+heavy lifting for you. You basically
+
+338
+00:05:20,000 --> 00:05:21,000
+heavy lifting for you. You basically just need to point at it. You need to
+
+339
+00:05:21,000 --> 00:05:21,000
+just need to point at it. You need to
+
+340
+00:05:21,000 --> 00:05:23,000
+just need to point at it. You need to say here's what you should be looking
+
+341
+00:05:23,000 --> 00:05:23,000
+say here's what you should be looking
+
+342
+00:05:23,000 --> 00:05:24,000
+say here's what you should be looking for and it's going to do most of the
+
+343
+00:05:24,000 --> 00:05:24,000
+for and it's going to do most of the
+
+344
+00:05:24,000 --> 00:05:26,000
+for and it's going to do most of the work for you. So there aren't a ton of
+
+345
+00:05:26,000 --> 00:05:26,000
+work for you. So there aren't a ton of
+
+346
+00:05:26,000 --> 00:05:28,000
+work for you. So there aren't a ton of custom rules that you need to be
+
+347
+00:05:28,000 --> 00:05:28,000
+custom rules that you need to be
+
+348
+00:05:28,000 --> 00:05:29,000
+custom rules that you need to be creating. Now in just a second we're
+
+349
+00:05:29,000 --> 00:05:29,000
+creating. Now in just a second we're
+
+350
+00:05:29,000 --> 00:05:31,000
+creating. Now in just a second we're going to talk about how we actually use
+
+351
+00:05:31,000 --> 00:05:31,000
+going to talk about how we actually use
+
+352
+00:05:31,000 --> 00:05:33,000
+going to talk about how we actually use IDP in data bricks but this is just a
+
+353
+00:05:33,000 --> 00:05:33,000
+IDP in data bricks but this is just a
+
+354
+00:05:33,000 --> 00:05:35,000
+IDP in data bricks but this is just a visual for you to see kind of what it
+
+355
+00:05:35,000 --> 00:05:35,000
+visual for you to see kind of what it
+
+356
+00:05:35,000 --> 00:05:37,000
+visual for you to see kind of what it looks like for that transformation. It's
+
+357
+00:05:37,000 --> 00:05:37,000
+looks like for that transformation. It's
+
+358
+00:05:37,000 --> 00:05:39,000
+looks like for that transformation. It's super simplified but it can take a raw
+
+359
+00:05:39,000 --> 00:05:39,000
+super simplified but it can take a raw
+
+360
+00:05:39,000 --> 00:05:42,000
+super simplified but it can take a raw PDF and in that PDF it could be free
+
+361
+00:05:42,000 --> 00:05:42,000
+PDF and in that PDF it could be free
+
+362
+00:05:42,000 --> 00:05:43,000
+PDF and in that PDF it could be free text, it could be columns and rows.
+
+363
+00:05:43,000 --> 00:05:43,000
+text, it could be columns and rows.
+
+364
+00:05:43,000 --> 00:05:45,000
+text, it could be columns and rows. We'll look at both in the next lessons.
+
+365
+00:05:45,000 --> 00:05:45,000
+We'll look at both in the next lessons.
+
+366
+00:05:45,000 --> 00:05:47,000
+We'll look at both in the next lessons. But you're going to parse out that data.
+
+367
+00:05:47,000 --> 00:05:47,000
+But you're going to parse out that data.
+
+368
+00:05:47,000 --> 00:05:49,000
+But you're going to parse out that data. You're going to use the IDP process
+
+369
+00:05:49,000 --> 00:05:49,000
+You're going to use the IDP process
+
+370
+00:05:49,000 --> 00:05:50,000
+You're going to use the IDP process which we're going to look at in just a
+
+371
+00:05:50,000 --> 00:05:50,000
+which we're going to look at in just a
+
+372
+00:05:50,000 --> 00:05:51,000
+which we're going to look at in just a sec. and it's going to put it into
+
+373
+00:05:51,000 --> 00:05:52,000
+sec. and it's going to put it into
+
+374
+00:05:52,000 --> 00:05:53,000
+sec. and it's going to put it into columns and rows to make that data
+
+375
+00:05:53,000 --> 00:05:53,000
+columns and rows to make that data
+
+376
+00:05:53,000 --> 00:05:56,000
+columns and rows to make that data usable. This is what I would say 95% of
+
+377
+00:05:56,000 --> 00:05:56,000
+usable. This is what I would say 95% of
+
+378
+00:05:56,000 --> 00:05:58,000
+usable. This is what I would say 95% of people want when they have these PDF
+
+379
+00:05:58,000 --> 00:05:58,000
+people want when they have these PDF
+
+380
+00:05:58,000 --> 00:05:59,000
+people want when they have these PDF documents that they want to use. They
+
+381
+00:05:59,000 --> 00:05:59,000
+documents that they want to use. They
+
+382
+00:05:59,000 --> 00:06:01,000
+documents that they want to use. They want to just have it in columns and rows
+
+383
+00:06:01,000 --> 00:06:01,000
+want to just have it in columns and rows
+
+384
+00:06:01,000 --> 00:06:03,000
+want to just have it in columns and rows that they can query off the data and
+
+385
+00:06:03,000 --> 00:06:03,000
+that they can query off the data and
+
+386
+00:06:03,000 --> 00:06:04,000
+that they can query off the data and they can actually use the data. And so
+
+387
+00:06:04,000 --> 00:06:04,000
+they can actually use the data. And so
+
+388
+00:06:04,000 --> 00:06:06,000
+they can actually use the data. And so how do you do that within data bricks? I
+
+389
+00:06:06,000 --> 00:06:06,000
+how do you do that within data bricks? I
+
+390
+00:06:06,000 --> 00:06:07,000
+how do you do that within data bricks? I had mentioned those AI functions and
+
+391
+00:06:07,000 --> 00:06:07,000
+had mentioned those AI functions and
+
+392
+00:06:07,000 --> 00:06:08,000
+had mentioned those AI functions and that's what you're going to use. You're
+
+393
+00:06:08,000 --> 00:06:08,000
+that's what you're going to use. You're
+
+394
+00:06:08,000 --> 00:06:10,000
+that's what you're going to use. You're going to use it for parsing, extracting
+
+395
+00:06:10,000 --> 00:06:10,000
+going to use it for parsing, extracting
+
+396
+00:06:10,000 --> 00:06:12,000
+going to use it for parsing, extracting and then classifying your data. If you
+
+397
+00:06:12,000 --> 00:06:12,000
+and then classifying your data. If you
+
+398
+00:06:12,000 --> 00:06:13,000
+and then classifying your data. If you know how to use those functions as well
+
+399
+00:06:13,000 --> 00:06:13,000
+know how to use those functions as well
+
+400
+00:06:13,000 --> 00:06:15,000
+know how to use those functions as well as just some basic SQL or Python because
+
+401
+00:06:15,000 --> 00:06:15,000
+as just some basic SQL or Python because
+
+402
+00:06:15,000 --> 00:06:18,000
+as just some basic SQL or Python because you can use either one, you can use IDP
+
+403
+00:06:18,000 --> 00:06:18,000
+you can use either one, you can use IDP
+
+404
+00:06:18,000 --> 00:06:20,000
+you can use either one, you can use IDP within data bricks to do this entire
+
+405
+00:06:20,000 --> 00:06:20,000
+within data bricks to do this entire
+
+406
+00:06:20,000 --> 00:06:22,000
+within data bricks to do this entire process. I personally like using SQL.
+
+407
+00:06:22,000 --> 00:06:22,000
+process. I personally like using SQL.
+
+408
+00:06:22,000 --> 00:06:23,000
+process. I personally like using SQL. That's what we're going to use in the
+
+409
+00:06:23,000 --> 00:06:23,000
+That's what we're going to use in the
+
+410
+00:06:23,000 --> 00:06:25,000
+That's what we're going to use in the next several lessons. But it's just as
+
+411
+00:06:25,000 --> 00:06:25,000
+next several lessons. But it's just as
+
+412
+00:06:25,000 --> 00:06:27,000
+next several lessons. But it's just as easy to use Python in the notebooks as
+
+413
+00:06:27,000 --> 00:06:27,000
+easy to use Python in the notebooks as
+
+414
+00:06:27,000 --> 00:06:28,000
+easy to use Python in the notebooks as well. One of my favorite things about
+
+415
+00:06:28,000 --> 00:06:28,000
+well. One of my favorite things about
+
+416
+00:06:28,000 --> 00:06:30,000
+well. One of my favorite things about using IDP and data bricks and I've used
+
+417
+00:06:30,000 --> 00:06:30,000
+using IDP and data bricks and I've used
+
+418
+00:06:30,000 --> 00:06:31,000
+using IDP and data bricks and I've used a lot of tools. I've used a lot of
+
+419
+00:06:31,000 --> 00:06:31,000
+a lot of tools. I've used a lot of
+
+420
+00:06:31,000 --> 00:06:33,000
+a lot of tools. I've used a lot of processes. One of my favorite things is
+
+421
+00:06:33,000 --> 00:06:33,000
+processes. One of my favorite things is
+
+422
+00:06:33,000 --> 00:06:35,000
+processes. One of my favorite things is that it's all in one place. This isn't
+
+423
+00:06:35,000 --> 00:06:35,000
+that it's all in one place. This isn't
+
+424
+00:06:35,000 --> 00:06:37,000
+that it's all in one place. This isn't some complex pipeline that uses six or
+
+425
+00:06:37,000 --> 00:06:38,000
+some complex pipeline that uses six or
+
+426
+00:06:38,000 --> 00:06:39,000
+some complex pipeline that uses six or seven different tools. It's all within
+
+427
+00:06:39,000 --> 00:06:39,000
+seven different tools. It's all within
+
+428
+00:06:39,000 --> 00:06:41,000
+seven different tools. It's all within data bricks. And so you have your raw
+
+429
+00:06:41,000 --> 00:06:42,000
+data bricks. And so you have your raw
+
+430
+00:06:42,000 --> 00:06:44,000
+data bricks. And so you have your raw data, your raw PDF files sitting in the
+
+431
+00:06:44,000 --> 00:06:44,000
+data, your raw PDF files sitting in the
+
+432
+00:06:44,000 --> 00:06:46,000
+data, your raw PDF files sitting in the catalog. And then once you process it,
+
+433
+00:06:46,000 --> 00:06:46,000
+catalog. And then once you process it,
+
+434
+00:06:46,000 --> 00:06:47,000
+catalog. And then once you process it, you're going to have your structured
+
+435
+00:06:47,000 --> 00:06:47,000
+you're going to have your structured
+
+436
+00:06:47,000 --> 00:06:49,000
+you're going to have your structured data sitting right next to it. And so
+
+437
+00:06:49,000 --> 00:06:49,000
+data sitting right next to it. And so
+
+438
+00:06:49,000 --> 00:06:51,000
+data sitting right next to it. And so you have your raw data, you have your
+
+439
+00:06:51,000 --> 00:06:51,000
+you have your raw data, you have your
+
+440
+00:06:51,000 --> 00:06:52,000
+you have your raw data, you have your code, and you have your structured
+
+441
+00:06:52,000 --> 00:06:52,000
+code, and you have your structured
+
+442
+00:06:52,000 --> 00:06:55,000
+code, and you have your structured output all in one place. And so it makes
+
+443
+00:06:55,000 --> 00:06:55,000
+output all in one place. And so it makes
+
+444
+00:06:55,000 --> 00:06:57,000
+output all in one place. And so it makes it really easy to actually do quality
+
+445
+00:06:57,000 --> 00:06:57,000
+it really easy to actually do quality
+
+446
+00:06:57,000 --> 00:06:59,000
+it really easy to actually do quality checks on your data. And if you've ever
+
+447
+00:06:59,000 --> 00:06:59,000
+checks on your data. And if you've ever
+
+448
+00:06:59,000 --> 00:07:00,000
+checks on your data. And if you've ever run quality checks on your data before,
+
+449
+00:07:00,000 --> 00:07:00,000
+run quality checks on your data before,
+
+450
+00:07:00,000 --> 00:07:02,000
+run quality checks on your data before, which you absolutely should be doing,
+
+451
+00:07:02,000 --> 00:07:02,000
+which you absolutely should be doing,
+
+452
+00:07:02,000 --> 00:07:04,000
+which you absolutely should be doing, when it's all spread out, it's all in
+
+453
+00:07:04,000 --> 00:07:04,000
+when it's all spread out, it's all in
+
+454
+00:07:04,000 --> 00:07:06,000
+when it's all spread out, it's all in these different systems, it is very,
+
+455
+00:07:06,000 --> 00:07:06,000
+these different systems, it is very,
+
+456
+00:07:06,000 --> 00:07:08,000
+these different systems, it is very, very tedious. And so actually having it
+
+457
+00:07:08,000 --> 00:07:08,000
+very tedious. And so actually having it
+
+458
+00:07:08,000 --> 00:07:10,000
+very tedious. And so actually having it all in one place makes it 10 times
+
+459
+00:07:10,000 --> 00:07:10,000
+all in one place makes it 10 times
+
+460
+00:07:10,000 --> 00:07:12,000
+all in one place makes it 10 times easier. Now in the next several lessons
+
+461
+00:07:12,000 --> 00:07:12,000
+easier. Now in the next several lessons
+
+462
+00:07:12,000 --> 00:07:13,000
+easier. Now in the next several lessons we're going to be diving into these
+
+463
+00:07:13,000 --> 00:07:13,000
+we're going to be diving into these
+
+464
+00:07:13,000 --> 00:07:15,000
+we're going to be diving into these functions of parsing, extracting and
+
+465
+00:07:15,000 --> 00:07:15,000
+functions of parsing, extracting and
+
+466
+00:07:15,000 --> 00:07:17,000
+functions of parsing, extracting and classifying our data. And then at the
+
+467
+00:07:17,000 --> 00:07:17,000
+classifying our data. And then at the
+
+468
+00:07:17,000 --> 00:07:18,000
+classifying our data. And then at the very end we'll have an end to end
+
+469
+00:07:18,000 --> 00:07:18,000
+very end we'll have an end to end
+
+470
+00:07:18,000 --> 00:07:20,000
+very end we'll have an end to end process where you can build out an
+
+471
+00:07:20,000 --> 00:07:20,000
+process where you can build out an
+
+472
+00:07:20,000 --> 00:07:22,000
+process where you can build out an entire process where you have your raw
+
+473
+00:07:22,000 --> 00:07:22,000
+entire process where you have your raw
+
+474
+00:07:22,000 --> 00:07:23,000
+entire process where you have your raw documents. We're going to process all of
+
+475
+00:07:23,000 --> 00:07:23,000
+documents. We're going to process all of
+
+476
+00:07:23,000 --> 00:07:25,000
+documents. We're going to process all of them. It could be 50, could be 100
+
+477
+00:07:25,000 --> 00:07:25,000
+them. It could be 50, could be 100
+
+478
+00:07:25,000 --> 00:07:27,000
+them. It could be 50, could be 100 documents. We're going to process it
+
+479
+00:07:27,000 --> 00:07:27,000
+documents. We're going to process it
+
+480
+00:07:27,000 --> 00:07:28,000
+documents. We're going to process it into structured data. I'm going to show
+
+481
+00:07:28,000 --> 00:07:28,000
+into structured data. I'm going to show
+
+482
+00:07:28,000 --> 00:07:30,000
+into structured data. I'm going to show you that it's actually quite easy and
+
+483
+00:07:30,000 --> 00:07:30,000
+you that it's actually quite easy and
+
+484
+00:07:30,000 --> 00:07:32,000
+you that it's actually quite easy and extremely accurate. I am a huge data
+
+485
+00:07:32,000 --> 00:07:32,000
+extremely accurate. I am a huge data
+
+486
+00:07:32,000 --> 00:07:33,000
+extremely accurate. I am a huge data collection nerd. This is like something
+
+487
+00:07:33,000 --> 00:07:33,000
+collection nerd. This is like something
+
+488
+00:07:33,000 --> 00:07:35,000
+collection nerd. This is like something I really enjoy. So, I can't wait to get
+
+489
+00:07:35,000 --> 00:07:36,000
+I really enjoy. So, I can't wait to get
+
+490
+00:07:36,000 --> 00:07:37,000
+I really enjoy. So, I can't wait to get hands-on, actually start writing out all
+
+491
+00:07:37,000 --> 00:07:37,000
+hands-on, actually start writing out all
+
+492
+00:07:37,000 --> 00:07:39,000
+hands-on, actually start writing out all the code and showing you how this works.
+
+493
+00:07:39,000 --> 00:07:39,000
+the code and showing you how this works.
+
+494
+00:07:39,000 --> 00:07:40,000
+the code and showing you how this works. We're going to be using the Data Bricks
+
+495
+00:07:40,000 --> 00:07:40,000
+We're going to be using the Data Bricks
+
+496
+00:07:40,000 --> 00:07:42,000
+We're going to be using the Data Bricks free edition for all this. So, all this
+
+497
+00:07:42,000 --> 00:07:42,000
+free edition for all this. So, all this
+
+498
+00:07:42,000 --> 00:07:44,000
+free edition for all this. So, all this is completely free to use. All you have
+
+499
+00:07:44,000 --> 00:07:44,000
+is completely free to use. All you have
+
+500
+00:07:44,000 --> 00:07:45,000
+is completely free to use. All you have to do is click on the link in the
+
+501
+00:07:45,000 --> 00:07:45,000
+to do is click on the link in the
+
+502
+00:07:45,000 --> 00:07:47,000
+to do is click on the link in the description. Go ahead and create an
+
+503
+00:07:47,000 --> 00:07:47,000
+description. Go ahead and create an
+
+504
+00:07:47,000 --> 00:07:48,000
+description. Go ahead and create an account and follow along in the next
+
+505
+00:07:48,000 --> 00:07:48,000
+account and follow along in the next
+
+506
+00:07:48,000 --> 00:07:50,000
+account and follow along in the next several lessons. I hope this was really
+
+507
+00:07:50,000 --> 00:07:50,000
+several lessons. I hope this was really
+
+508
+00:07:50,000 --> 00:07:52,000
+several lessons. I hope this was really helpful. If it was, be sure to like and
+
+509
+00:07:52,000 --> 00:07:52,000
+helpful. If it was, be sure to like and
+
+510
+00:07:52,000 --> 00:07:53,000
+helpful. If it was, be sure to like and subscribe, and I will see you in the
+
+511
+00:07:53,000 --> 00:07:53,000
+subscribe, and I will see you in the
+
+512
+00:07:53,000 --> 00:07:55,000
+subscribe, and I will see you in the next video.
+
+513
+00:07:55,000 --> 00:07:55,000
+next video.
+
+514
+00:07:55,000 --> 00:07:57,000
+next video. [music]

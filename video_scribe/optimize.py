@@ -16,7 +16,7 @@ from .utils import setup_logger, count_words
 
 logger = setup_logger("subtitle_optimizer")
 
-MAX_STEPS = 3
+MAX_STEPS = 2
 
 
 class SubtitleOptimizer:
@@ -88,7 +88,7 @@ class SubtitleOptimizer:
                     raise NotImplementedError("Only SRT file path or ASRData object is supported")
             else:
                 asr_data = subtitle_data
-
+            
             # Convert to dictionary format
             subtitle_dict = {
                 str(i): seg.text for i, seg in enumerate(asr_data.segments, 1)

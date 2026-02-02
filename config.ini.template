@@ -4,6 +4,8 @@
 api_key = xxxxx
 base_url = https://yyyyy
 model = deepseek-reasoner
+opt_model = deepseek-chat
+enable_subtitle_optimization = false
 
 [rsshub]
 # RSSHub 服务地址 (用于 X/Twitter 等需要自建服务的源)

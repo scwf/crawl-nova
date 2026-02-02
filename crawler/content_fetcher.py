@@ -208,14 +208,24 @@ class GenericVideoFetcher:
             # 绝对兜底
             return get_hash(url)[:12]
 
-    def fetch_transcript(self, video_id: str, video_url: str, context: str = "") -> str:
+    def fetch_transcript(self, video_id: str, video_url: str, context: str = "", optimize: bool = False) -> str:
         """
         获取视频字幕，并保存 srt/txt 到 raw 目录
+        
+        使用 video_scribe 模块自动处理（下载+转录）
+        
+        参数:
+            video_id: 视频ID (也是目录名)
+            video_url: 视频可下载链接
+        
+        返回:
+            视频字幕文本
         """
         import os
         import sys
         
         # 确保能导入 video_scribe
+        # video_scribe 在项目根目录， content_fetcher.py 在 crawler/ 目录
         current_dir = os.path.dirname(os.path.abspath(__file__))
         project_root = os.path.dirname(current_dir)
         if project_root not in sys.path:
@@ -229,44 +239,49 @@ class GenericVideoFetcher:
             logger.info(f"开始转录视频 [ID: {video_id}] -> {output_dir}")
             
             # 调用 video_scribe 处理
+            # process_video 会自动保存 .srt, .txt, .json 到 output_dir
             from video_scribe.core import process_video, optimize_subtitle
             
             asr_data = process_video(
                 video_url_or_path=video_url,
                 output_dir=output_dir,
-                device="cuda", 
-                language=None
+                device="cuda", # 默认使用CUDA，如果失败 video_scribe 可能会报错，需确保环境
+                language=None  # 自动检测
             )
             
             # --- LLM 字幕优化 ---
-            final_data = asr_data
-            try:
-                logger.info(f"开始优化字幕 [ID: {video_id}]...")
-                api_key = config.get('llm', 'api_key')
-                base_url = config.get('llm', 'base_url')
-                model = config.get('llm', 'model', fallback='deepseek-reasoner')
-                
-                custom_prompt = ""
-                if context:
-                    custom_prompt = f"视频背景信息: {context}\n请利用此信息来优化字幕。"
+            # youtube 自动生成的字幕质量很差，会导致优化后的字幕文件和优化前字幕变化较大，导致优化失败（差异判别过大），故先把优化关掉
+            final_data = asr_data  # 默认为原始数据
+            if optimize:
+                try:
+                    logger.info(f"开始优化字幕 [ID: {video_id}]...")
+                    api_key = config.get('llm', 'api_key')
+                    base_url = config.get('llm', 'base_url')
+                    model = config.get('llm', 'opt_model', fallback='gpt-3.5-turbo')
+                    
+                    if context:
+                        custom_prompt = f"Context: {context}"
+                    logger.info(f"优化字幕上下文信息：{custom_prompt}")
 
-                optimized_data = optimize_subtitle(
-                    subtitle_data=asr_data,
-                    model=model,
-                    api_key=api_key,
-                    base_url=base_url,
-                    custom_prompt=custom_prompt
-                )
-                
-                save_base = os.path.join(output_dir, f"{video_id}_optimized")
-                optimized_data.save(save_base + ".srt")
-                optimized_data.save(save_base + ".txt")
-                
-                final_data = optimized_data
-                
-            except Exception as opt_e:
-                logger.warning(f"字幕优化失败，回退到原始字幕 [ID: {video_id}]: {opt_e}")
+                    optimized_data = optimize_subtitle(
+                        subtitle_data=asr_data,
+                        model=model,
+                        api_key=api_key,
+                        base_url=base_url,
+                        custom_prompt=custom_prompt
+                    )
+                    
+                    save_base = os.path.join(output_dir, f"{video_id}_optimized")
+                    optimized_data.save(save_base + ".srt")
+                    optimized_data.save(save_base + ".txt")
+                    
+                    final_data = optimized_data
+                    
+                except Exception as opt_e:
+                    logger.warning(f"字幕优化失败，回退到原始字幕 [ID: {video_id}]: {opt_e}")
+                    # 即使优化失败，也继续返回原始字幕
             
+            # 返回最终文本（优化后或原始）
             return final_data.to_txt()
             
         except Exception as e:
@@ -275,7 +290,7 @@ class GenericVideoFetcher:
             traceback.print_exc()
             return ''
     
-    def fetch(self, url: str, context: str = "", title: str = "") -> Optional[EmbeddedContent]:
+    def fetch(self, url: str, context: str = "", title: str = "", optimize: bool = False) -> Optional[EmbeddedContent]:
         """
         获取视频的完整信息
         
@@ -283,6 +298,8 @@ class GenericVideoFetcher:
             url: 视频URL
             context: 上下文信息
             title: 视频标题 (用于生成更有意义的文件名)
+        返回:
+            EmbeddedContent对象，如果无法提取则返回None
         """
         parsed = urlparse(url)
         domain = parsed.netloc.lower()
@@ -301,7 +318,7 @@ class GenericVideoFetcher:
             logger.info(f"无法解析视频信息: {_shorten_url(url)}")
             return None
         
-        transcript = self.fetch_transcript(video_id, video_url, context=context)
+        transcript = self.fetch_transcript(video_id, video_url, context=context, optimize=optimize)
         
         return EmbeddedContent(
             url=url,
@@ -372,7 +389,7 @@ class ContentFetcher:
         self.video_fetcher = GenericVideoFetcher()
         self.blog_fetcher = BlogFetcher()
     
-    def fetch_embedded_content(self, text: str, title: str = "") -> Tuple[List[EmbeddedContent], List[str]]:
+    def fetch_embedded_content(self, text: str, title: str = "", optimize_video: bool = False) -> Tuple[List[EmbeddedContent], List[str]]:
         """
         从文本中提取并爬取所有嵌入内容
         
@@ -396,8 +413,7 @@ class ContentFetcher:
         for url in video_links:
             try:
                 logger.info(f"正在获取视频内容: {_shorten_url(url)}")
-                # 传递 title 以优化 ID 生成
-                content = self.video_fetcher.fetch(url, title=title)
+                content = self.video_fetcher.fetch(url, title=title, context=text, optimize=optimize_video)
                 if content:
                     results.append(content)
             except Exception as e:

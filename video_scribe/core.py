@@ -8,55 +8,9 @@ from .asr.factory import create_asr
 from .utils import setup_logger
 from .resource_manager import ensure_executable, ensure_model
 import glob
-import webvtt
 import json
 
 logger = setup_logger("core")
-
-
-def parse_vtt_to_asr_data(vtt_path: str) -> ASRData:
-    """Parse a WebVTT file into an ASRData object."""
-    from .data import ASRDataSeg
-    
-    segments = []
-    
-    for caption in webvtt.read(vtt_path):
-        # Convert timestamp strings to milliseconds (int)
-        # WebVTT typical format: 00:00:01.500
-        def time_str_to_ms(t_str):
-            # webvtt returns total seconds as float in some versions, or we might need to parse string
-            # webvtt-py's caption.start is usually a string "HH:MM:SS.mmm"
-            parts = t_str.split(':')
-            if len(parts) == 3: # HH:MM:SS.mmm
-                h, m, s = parts
-                s, ms = s.split('.')
-                return int(h) * 3600000 + int(m) * 60000 + int(s) * 1000 + int(ms)
-            elif len(parts) == 2: # MM:SS.mmm
-                m, s = parts
-                s, ms = s.split('.')
-                return int(m) * 60000 + int(s) * 1000 + int(ms)
-            return 0
-
-        # webvtt-py caption objects usually have start_in_seconds as float
-        if hasattr(caption, 'start_in_seconds'):
-            start_ms = int(caption.start_in_seconds * 1000)
-            end_ms = int(caption.end_in_seconds * 1000)
-        else:
-            # Fallback to parsing string if needed (though start_in_seconds should exist)
-            start_ms = time_str_to_ms(caption.start)
-            end_ms = time_str_to_ms(caption.end)
-
-        text = caption.text.strip().replace('\n', ' ')
-        if not text:
-            continue
-            
-        segments.append(ASRDataSeg(
-            text=text,
-            start_time=start_ms,
-            end_time=end_ms
-        ))
-        
-    return ASRData(segments=segments)
 
 def try_download_youtube_subtitles(url: str, output_dir: str, lang: str = "en") -> Optional[str]:
     """
@@ -78,14 +32,15 @@ def try_download_youtube_subtitles(url: str, output_dir: str, lang: str = "en") 
     output_template = os.path.join(output_dir, "ytsub_temp.%(ext)s")
     
     # Try manual subs first, then auto-subs
-    # We use 'vtt' format as it's standard and easy to parse
+    # Try manual subs first, then auto-subs
+    # We use 'srt' format as it's cleaner via yt-dlp conversion
     cmd = [
         "yt-dlp",
         "--skip-download",   # Don't download video
         "--write-subs",      # Try manual subs
         "--write-auto-subs", # Fallback to auto subs
         "--sub-lang", lang,  # Language code
-        "--sub-format", "vtt", # Enforce vtt
+        "--sub-format", "srt", # Enforce srt
         "--output", output_template,
         url
     ]
@@ -95,8 +50,8 @@ def try_download_youtube_subtitles(url: str, output_dir: str, lang: str = "en") 
         subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
         # Check if file exists
-        # yt-dlp might name it ytsub_temp.en.vtt or similar
-        potential_files = glob.glob(os.path.join(output_dir, "ytsub_temp.*.vtt"))
+        # yt-dlp might name it ytsub_temp.en.srt or similar
+        potential_files = glob.glob(os.path.join(output_dir, "ytsub_temp.*.srt"))
         if potential_files:
             return potential_files[0]
             
@@ -130,12 +85,13 @@ def process_video(
     # Step 0.5: Try to get existing YouTube subtitles (Optimization)
     if not os.path.exists(video_url_or_path):
         target_lang = language if language else "en"
-        vtt_path = try_download_youtube_subtitles(video_url_or_path, output_dir, target_lang)
+        srt_path = try_download_youtube_subtitles(video_url_or_path, output_dir, target_lang)
         
-        if vtt_path:
+        if srt_path:
             logger.info("Found YouTube subtitles! Skipping audio transcription.")
             try:
-                asr_data = parse_vtt_to_asr_data(vtt_path)
+                with open(srt_path, "r", encoding="utf-8") as f:
+                    asr_data = ASRData.from_srt(f.read())
                 
                 # We still need a base name for export
                 # Since we didn't download video, we use the video ID or a generic name
@@ -150,8 +106,8 @@ def process_video(
                 asr_data.save(output_base + ".txt")
                 asr_data.save(output_base + ".json")
                 
-                # Cleanup temp vtt
-                try: os.remove(vtt_path)
+                # Cleanup temp srt
+                try: os.remove(srt_path)
                 except: pass
                 
                 logger.info("Done (using existing subtitles)!")
@@ -207,7 +163,7 @@ def optimize_subtitle(
     custom_prompt: str = "",
     api_key: Optional[str] = None,
     base_url: Optional[str] = None,
-    thread_num: int = 4,
+    thread_num: int = 10,
     batch_num: int = 10
 ) -> ASRData:
     """Optimize subtitle content using LLM.

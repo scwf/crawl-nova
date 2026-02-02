@@ -108,7 +108,7 @@ class ASRData:
             time_parts = list(map(int, match.groups()))
             start_time = time_parts[0]*3600000 + time_parts[1]*60000 + time_parts[2]*1000 + time_parts[3]
             end_time = time_parts[4]*3600000 + time_parts[5]*60000 + time_parts[6]*1000 + time_parts[7]
-            
+                
             text = " ".join(lines[2:])
             segments.append(ASRDataSeg(text, start_time, end_time))
             

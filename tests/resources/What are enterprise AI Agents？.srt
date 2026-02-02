@@ -1,0 +1,95 @@
+1
+00:00:00,000 --> 00:00:04,540
+AI agents are here for enterprises, and they hold massive potential.
+
+2
+00:00:05,260 --> 00:00:10,400
+These tools that can reason, decide, and act are the talk of companies everywhere.
+
+3
+00:00:10,980 --> 00:00:13,820
+But getting agents to production is still too hard.
+
+4
+00:00:14,360 --> 00:00:15,480
+Why aren't agents everywhere?
+
+5
+00:00:16,060 --> 00:00:18,680
+It's because enterprise AI agents are hard to get right.
+
+6
+00:00:19,180 --> 00:00:20,440
+Many of them just don't work.
+
+7
+00:00:20,780 --> 00:00:21,560
+And the ones that do?
+
+8
+00:00:21,900 --> 00:00:23,220
+They're not always accurate.
+
+9
+00:00:23,780 --> 00:00:27,880
+They force choices and don't let you choose the best combination of models for the job.
+
+10
+00:00:27,880 --> 00:00:32,880
+And they create risk, forcing you to send your critical data to external AI models.
+
+11
+00:00:33,520 --> 00:00:38,040
+That's why thousands of organizations around the globe have partnered with Databricks to
+
+12
+00:00:38,040 --> 00:00:39,460
+adopt a different approach.
+
+13
+00:00:40,020 --> 00:00:44,200
+At Databricks, we've pioneered a better way to build enterprise AI agents,
+
+14
+00:00:44,700 --> 00:00:49,440
+tailoring them automatically to your data and use case to provide real value.
+
+15
+00:00:50,100 --> 00:00:55,280
+Banks are using multi-agent systems to securely review investment theses and generate investment
+
+16
+00:00:55,280 --> 00:01:01,180
+memos, saving 200,000 man-hours and generating $250 million in value.
+
+17
+00:01:01,900 --> 00:01:07,220
+In energy, teams are combining real-time grid, meter, and weather data to predict potential
+
+18
+00:01:07,220 --> 00:01:14,660
+disruptions and restore power 25% faster for customers, saving $18 million in annual outage costs.
+
+19
+00:01:15,240 --> 00:01:19,960
+And in healthcare and life sciences, they're predicting how drug molecules impact gene
+
+20
+00:01:19,960 --> 00:01:25,020
+expression, accelerating the understanding of disease biology to design new cures.
+
+21
+00:01:25,860 --> 00:01:30,160
+Databricks gives you the highest accuracy by using research-backed techniques to measure
+
+22
+00:01:30,160 --> 00:01:34,680
+and tune agents that continuously improve without needing to be rebuilt.
+
+23
+00:01:35,220 --> 00:01:39,820
+So you can get more agents to production and have more success with AI.
+
+24
+00:01:40,740 --> 00:01:43,060
+Visit the Databricks website to learn more.
