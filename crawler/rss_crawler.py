@@ -14,7 +14,7 @@ import configparser
 import feedparser
 from datetime import datetime, timezone
 from dateutil import parser as date_parser
-from common import organize_data, posts_to_markdown_table, group_posts_by_domain, save_batch_manifest, DAYS_LOOKBACK, setup_logger
+from common import organize_data, group_posts_by_domain, save_batch_manifest, DAYS_LOOKBACK, setup_logger
 
 logger = setup_logger("rss_crawler")
 from content_fetcher import ContentFetcher
