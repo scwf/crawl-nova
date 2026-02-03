@@ -14,7 +14,8 @@ import configparser
 import feedparser
 from datetime import datetime, timezone
 from dateutil import parser as date_parser
-from common import organize_data, group_posts_by_domain, save_batch_manifest, DAYS_LOOKBACK, setup_logger
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from common import organize_single_post, group_posts_by_domain, save_batch_manifest, DAYS_LOOKBACK, setup_logger
 
 logger = setup_logger("rss_crawler")
 from content_fetcher import ContentFetcher
@@ -90,16 +91,44 @@ rss_sources = {
     "weixin": load_weixin_accounts_from_config(),  # 从配置文件读取微信公众号
     "X": load_x_accounts_from_config(),  # 从配置文件读取 X 账户
     "YouTube": load_youtube_channels_from_config(),  # 从配置文件读取 YouTube 频道
-    "blog": {
-        # "36Kr_News": "https://rsshub.app/36kr/newsflashes",
-        # "OpenAI_Blog": "https://rsshub.app/openai/blog",
-    },
 }
 
 # ================= 内容增强模块 =================
 # 用于从X推文中提取嵌入链接内容，以及从YouTube视频中提取字幕
 content_fetcher = ContentFetcher()
 # ===========================================
+
+
+def generate_post_markdown(post, domain):
+    """生成单篇文章的 Markdown 内容"""
+    lines = [
+        f"# {post.get('event', '未命名事件')}",
+        "",
+        f"- **日期**: {post.get('date', '未知日期')}",
+        f"- **事件分类**: {post.get('category', '未分类')}",
+        f"- **所属领域**: {domain}",
+        f"- **是否属于洞察范围**: {'✅ 是' if post.get('is_in_scope') else '❌ 否'}",
+        f"- **判断理由**: {post.get('scope_reason', '无')}",
+        f"- **来源**: {post.get('source_name', '未知')}",
+        f"- **原文链接**: {post.get('link', '')}",
+        "",
+        "## 关键信息",
+        post.get('key_info', ''),
+        "",
+        "## 详细内容",
+        post.get('detail', ''),
+        "",
+    ]
+    
+    if post.get('extra_content'):
+        lines.extend(["​## 补充内容", post['extra_content'], ""])
+    
+    if post.get('extra_urls'):
+        lines.append("## 外部链接")
+        lines.extend([f"- {url}" for url in post['extra_urls']])
+        lines.append("")
+    
+    return "\n".join(lines)
 
 
 # ================= 辅助函数 =================
@@ -237,21 +266,51 @@ if __name__ == "__main__":
     # 收集所有整理后的文章
     all_organized_posts = []
     
-    for category, sources in rss_sources.items():
-        if not sources:  # 跳过空分类
-            continue
-        
-        logger.info(f"📂 处理分类: {category}")
-        
-        for name, url in sources.items():
+    MAX_WORKERS = config.getint('crawler', 'organize_workers', fallback=5)
+    
+    # 1. 准备源列表
+    sources_list = [
+        (category, name, url) 
+        for category, sources in rss_sources.items()
+        for name, url in sources.items()
+    ]
+    
+    logger.info(f"� 开始处理 {len(sources_list)} 个订阅源 (顺序抓取 -> 并行整理)...")
+    
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        # 2. 串行抓取所有源
+        all_posts = []  # [(post, source_name), ...]
+        for category, name, url in sources_list:
             posts = fetch_recent_posts(url, DAYS_LOOKBACK, source_type=category, name=name)
-            logger.info(f"-> 发现 {len(posts)} 条相关内容，使用LLM进行整理...")
+            if posts:
+                logger.info(f"-> [{name}] 获取 {len(posts)} 条")
+                all_posts.extend((post, name) for post in posts)
+        
+        logger.info(f"共获取 {len(all_posts)} 篇文章，提交并行整理...")
+        
+        # 3. 并行整理（每篇文章一个任务）
+        futures = {
+            executor.submit(organize_single_post, post, name): (post, name)
+            for post, name in all_posts
+        }
+        
+        # 4. 获取结果
+        completed = 0
+        for future in as_completed(futures):
+            post, name = futures[future]
+            completed += 1
+            try:
+                result = future.result()
+                if result:
+                    all_organized_posts.append(result)
+            except Exception as e:
+                logger.error(f"❌ [{name}] 整理失败: {e}")
             
-            # organize_data 现在返回 list[dict]
-            organized_posts = organize_data(posts, name)
-            all_organized_posts.extend(organized_posts)
-            
-            logger.info(f"-> 整理完成，有效内容 {len(organized_posts)} 条")
+            # 每处理 10 篇打印一次进度
+            if completed % 10 == 0:
+                logger.info(f"进度: {completed}/{len(futures)}")
+                
+    logger.info(f"所有任务执行完成，共获取 {len(all_organized_posts)} 条有效内容")
     
     # 按领域分组
     logger.info(f"\n📊 整理完，共 {len(all_organized_posts)} 条有效内容，按领域分组...")
@@ -292,30 +351,7 @@ if __name__ == "__main__":
             post_path = os.path.join(domain_dir_path, post_filename)
             
             # 生成 Markdown 内容
-            md_content = f"# {event}\n\n"
-            md_content += f"- **日期**: {date_str}\n"
-            md_content += f"- **事件分类**: {post.get('category', '未分类')}\n"
-            md_content += f"- **所属领域**: {domain}\n"
-            md_content += f"- **是否属于洞察范围**: {'✅ 是' if post.get('is_in_scope') else '❌ 否'}\n"
-            md_content += f"- **判断理由**: {post.get('scope_reason', '无')}\n"
-            md_content += f"- **来源**: {post.get('source_name', '未知')}\n"
-            md_content += f"- **原文链接**: {post.get('link', '')}\n\n"
-            
-            md_content += "## 关键信息\n"
-            md_content += f"{post.get('key_info', '')}\n\n"
-            
-            md_content += "## 详细内容\n"
-            md_content += f"{post.get('detail', '')}\n\n"
-            
-            if post.get('extra_content'):
-                md_content += "## 补充内容\n"
-                md_content += f"{post.get('extra_content', '')}\n\n"
-                
-            if post.get('extra_urls'):
-                md_content += "## 外部链接\n"
-                for url in post.get('extra_urls', []):
-                    md_content += f"- {url}\n"
-                md_content += "\n"
+            md_content = generate_post_markdown(post, domain)
             
             # 写入文件
             with open(post_path, 'w', encoding='utf-8') as f:

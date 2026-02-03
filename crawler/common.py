@@ -7,6 +7,7 @@ import time
 import configparser
 from urllib.parse import urlparse
 from datetime import datetime
+import threading
 from openai import OpenAI
 
 # 时间范围配置,爬取最近多少天的内容
@@ -28,6 +29,10 @@ def setup_logger(name: str):
     return logger
 
 logger = setup_logger("common")
+
+def _tid():
+    """获取当前线程标识，用于日志"""
+    return f"[T{threading.current_thread().name.split('_')[-1]}]"
 
 
 # 加载配置文件 (config.ini，位于项目根目录)
@@ -119,10 +124,10 @@ EXAMPLE JSON OUTPUT:
             # 处理 None 或空字符串
             if not result_text or not result_text.strip():
                 if attempt < max_retries:
-                    logger.info(f"LLM 返回空响应 (finish_reason: {finish_reason})，{retry_delay}秒后重试 ({attempt+1}/{max_retries})...")
+                    logger.info(f"{_tid()} LLM 返回空响应 (finish_reason: {finish_reason})，{retry_delay}秒后重试 ({attempt+1}/{max_retries})...")
                     time.sleep(retry_delay)
                     continue
-                logger.info(f"LLM 返回空响应 (finish_reason: {finish_reason})，已重试 {max_retries} 次，跳过")
+                logger.info(f"{_tid()} LLM 返回空响应 (finish_reason: {finish_reason})，已重试 {max_retries} 次，跳过")
                 return None
             
             # 成功获取响应，跳出重试循环
@@ -131,7 +136,7 @@ EXAMPLE JSON OUTPUT:
             
         except Exception as e:
             if attempt < max_retries:
-                logger.info(f"API 调用失败: {e}，{retry_delay}秒后重试 ({attempt+1}/{max_retries})...")
+                logger.info(f"{_tid()} API 调用失败: {e}，{retry_delay}秒后重试 ({attempt+1}/{max_retries})...")
                 time.sleep(retry_delay)
                 continue
             # 最后一次重试也失败，抛出异常
@@ -141,13 +146,13 @@ EXAMPLE JSON OUTPUT:
     try:
         result = json.loads(result_text)
     except json.JSONDecodeError as e:
-        logger.info(f"JSON 解析失败: {e}")
-        logger.info(f"原始响应内容: {result_text[:200]}..." if len(result_text) > 200 else f"原始响应内容: {result_text}")
+        logger.info(f"{_tid()} JSON 解析失败: {e}")
+        logger.info(f"{_tid()} 原始响应内容: {result_text[:200]}..." if len(result_text) > 200 else f"{_tid()} 原始响应内容: {result_text}")
         return None
     
     # 检查是否为跳过标记
     if result.get('skip'):
-        logger.info(f"LLM 返回跳过标记: {result}")
+        logger.info(f"{_tid()} LLM 返回跳过标记: {result}")
         return None
     
     # 添加来源名称
@@ -162,7 +167,11 @@ EXAMPLE JSON OUTPUT:
 
 def organize_data(posts, source_name):
     """
-    调用 LLM 对信息进行标准化整理 (逐篇处理，避免上下文超限)
+    调用 LLM 对信息进行标准化整理 (逐篇串行处理)
+    
+    注意: 此方法内部是串行处理的。
+    - web_crawler.py 使用此方法进行批量处理
+    - rss_crawler.py 直接使用 organize_single_post 配合线程池实现细粒度并行
     
     返回:
         list[dict]: 包含所有整理后的文章数据列表，每个 dict 包含:
