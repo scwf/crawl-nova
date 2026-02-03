@@ -128,6 +128,15 @@ class LinkExtractor:
 class GenericVideoFetcher:
     """通用视频信息获取器 (支持YouTube, Twitter视频等)"""
     
+    # 已知的无声视频URL模式 (如Twitter GIF转MP4)
+    SILENT_VIDEO_PATTERNS = [
+        '/tweet_video/',  # Twitter GIF -> MP4
+    ]
+    
+    def _is_likely_silent_video(self, url: str) -> bool:
+        """检查URL是否可能是无声视频（如GIF转MP4）"""
+        return any(pattern in url for pattern in self.SILENT_VIDEO_PATTERNS)
+    
     def _parse_video_info(self, url: str) -> Tuple[Optional[str], str]:
         """
         解析视频信息
@@ -285,6 +294,13 @@ class GenericVideoFetcher:
             return final_data.to_txt()
             
         except Exception as e:
+            error_msg = str(e)
+            
+            # 特殊处理：无音频编解码器（静音视频/GIF）
+            if 'unable to obtain file audio codec' in error_msg:
+                logger.info(f"跳过静音视频（无音轨）[ID: {video_id}]")
+                return ''
+            
             logger.error(f"视频转录流程严重失败 [ID: {video_id}]: {e}")
             import traceback
             traceback.print_exc()
@@ -316,6 +332,11 @@ class GenericVideoFetcher:
 
         if not video_id:
             logger.info(f"无法解析视频信息: {_shorten_url(url)}")
+            return None
+        
+        # 预检查：跳过已知的无声视频
+        if self._is_likely_silent_video(url):
+            logger.info(f"跳过静音视频（URL模式匹配）: {_shorten_url(url)}")
             return None
         
         transcript = self.fetch_transcript(video_id, video_url, context=context, optimize=optimize)
