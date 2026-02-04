@@ -13,6 +13,7 @@ import time
 import random
 import configparser
 import feedparser
+import requests
 from datetime import datetime, timezone
 from dateutil import parser as date_parser
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -288,7 +289,17 @@ def fetch_recent_posts(rss_url, days, source_type="未知", name="", save_raw=Tr
     """
     logger.info(f"正在抓取 [{source_type}] {name}: {rss_url} ...")
     try:
-        feed = feedparser.parse(rss_url)
+        # 使用 requests 获取内容，设置 30 秒超时
+        try:
+            response = requests.get(rss_url, timeout=30)
+            response.raise_for_status()
+            feed = feedparser.parse(response.content)
+        except requests.exceptions.Timeout:
+            logger.info(f"请求超时 (30s): {rss_url}")
+            return []
+        except requests.exceptions.RequestException as e:
+            logger.info(f"请求失败: {e}")
+            return []
         
         # 检查 RSS 解析是否出错
         if feed.bozo and not feed.entries:
