@@ -101,14 +101,18 @@ content_fetcher = ContentFetcher()
 
 def generate_post_markdown(post, domain):
     """生成单篇文章的 Markdown 内容"""
+    # 生成星级评分显示
+    score = post.get('quality_score', 3)
+    stars = '⭐' * score + '☆' * (5 - score)
+    
     lines = [
         f"# {post.get('event', '未命名事件')}",
         "",
         f"- **日期**: {post.get('date', '未知日期')}",
         f"- **事件分类**: {post.get('category', '未分类')}",
         f"- **所属领域**: {domain}",
-        f"- **是否属于洞察范围**: {'✅ 是' if post.get('is_in_scope') else '❌ 否'}",
-        f"- **判断理由**: {post.get('scope_reason', '无')}",
+        f"- **质量评分**: {stars} ({score}/5)",
+        f"- **评分理由**: {post.get('quality_reason', '无')}",
         f"- **来源**: {post.get('source_name', '未知')}",
         f"- **原文链接**: {post.get('link', '')}",
         "",
@@ -269,36 +273,58 @@ if __name__ == "__main__":
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     os.makedirs(output_dir, exist_ok=True)
     
-    # 用于追踪已创建的领域目录 {domain: (dir_path, file_count)}
+    # 用于追踪已创建的领域目录 
+    # {domain: {'path': dir_path, 'name': dir_name, 'high': count, 'pending': count, 'excluded': count}}
     domain_dirs = {}
     
+    def get_quality_tier(score):
+        """根据质量评分返回子目录名"""
+        if score >= 4:
+            return "high"       # 高质量 (4-5分)
+        elif score >= 2:
+            return "pending"    # 待定 (2-3分)
+        else:
+            return "excluded"   # 排除 (1分)
+    
     def get_domain_dir(domain):
-        """获取领域目录路径，不存在则创建"""
+        """获取领域目录路径，不存在则创建（包含 high/pending/excluded 三个子目录）"""
         if domain not in domain_dirs:
             safe_domain = "".join(c if c.isalnum() or c in ('-', '_') else '_' for c in domain)
             dir_name = f"{safe_domain}_{timestamp}"
             dir_path = os.path.join(output_dir, dir_name)
-            os.makedirs(dir_path, exist_ok=True)
-            domain_dirs[domain] = {'path': dir_path, 'name': dir_name, 'count': 0}
+            
+            # 创建领域主目录和三个子目录
+            for tier in ['high', 'pending', 'excluded']:
+                os.makedirs(os.path.join(dir_path, tier), exist_ok=True)
+            
+            domain_dirs[domain] = {
+                'path': dir_path, 
+                'name': dir_name, 
+                'high': 0, 
+                'pending': 0, 
+                'excluded': 0
+            }
         return domain_dirs[domain]
     
     def write_post_file(result):
-        """将单篇文章写入对应领域目录"""
+        """将单篇文章写入对应领域的质量分级目录"""
         domain = result.get('domain', '其他')
         event = result.get('event', '未命名事件')
         date_str = result.get('date', '未知日期')
+        quality_score = result.get('quality_score', 3)
         
         domain_info = get_domain_dir(domain)
+        tier = get_quality_tier(quality_score)
         
         safe_event = "".join(c if c.isalnum() or c in ('-', '_') else '_' for c in event)[:50]
         filename = f"{safe_event}_{date_str}.md"
-        filepath = os.path.join(domain_info['path'], filename)
+        filepath = os.path.join(domain_info['path'], tier, filename)
         
         md_content = generate_post_markdown(result, domain)
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(md_content)
         
-        domain_info['count'] += 1
+        domain_info[tier] += 1
     
     # 1. 准备源列表
     sources_list = [
@@ -346,7 +372,12 @@ if __name__ == "__main__":
     
     logger.info(f"所有任务执行完成，共获取 {len(all_organized_posts)} 条有效内容")
     
-    # 5. 保存批次清单
+    # 5. 计算统计信息
+    total_high = sum(info['high'] for info in domain_dirs.values())
+    total_pending = sum(info['pending'] for info in domain_dirs.values())
+    total_excluded = sum(info['excluded'] for info in domain_dirs.values())
+    
+    # 6. 保存批次清单
     domain_report_dirs = {domain: info['name'] for domain, info in domain_dirs.items()}
     save_batch_manifest(
         output_dir=output_dir,
@@ -354,24 +385,37 @@ if __name__ == "__main__":
         domain_reports=domain_report_dirs,
         stats={
             "total_posts": len(all_organized_posts),
-            "domain_count": len(domain_dirs)
+            "domain_count": len(domain_dirs),
+            "quality_distribution": {
+                "high": total_high,
+                "pending": total_pending,
+                "excluded": total_excluded
+            }
         }
     )
     
     # 打印执行结果摘要
-    print("\n" + "="*50)
+    print("\n" + "="*60)
     print("📊 执行结果摘要")
-    print("="*50)
+    print("="*60)
     print(f"总共处理: {len(all_organized_posts)} 条有效内容")
-    print(f"领域分布:")
+    print(f"\n质量分布:")
+    print(f"  ⭐ 高质量 (high):     {total_high} 条")
+    print(f"  🔶 待定 (pending):    {total_pending} 条")
+    print(f"  ⛔ 排除 (excluded):   {total_excluded} 条")
+    print(f"\n领域分布:")
     for domain, info in domain_dirs.items():
-        print(f"  - {domain}: {info['count']} 条")
-        logger.info(f"✅ 领域 [{domain}] 已保存 {info['count']} 个文件")
+        total = info['high'] + info['pending'] + info['excluded']
+        print(f"  - {domain}: {total} 条 (高:{info['high']} / 待定:{info['pending']} / 排除:{info['excluded']})")
+        logger.info(f"✅ 领域 [{domain}] 高质量:{info['high']} 待定:{info['pending']} 排除:{info['excluded']}")
     print(f"\n生成目录:")
     for domain, info in domain_dirs.items():
-        print(f"  - {info['name']}")
+        print(f"  - {info['name']}/")
+        print(f"      ├── high/     ({info['high']} 个文件)")
+        print(f"      ├── pending/  ({info['pending']} 个文件)")
+        print(f"      └── excluded/ ({info['excluded']} 个文件)")
     
     elapsed_time = time.time() - start_time
-    print(f"\n{'='*50}")
+    print(f"\n{'='*60}")
     print(f"✅ 执行完成，总耗时: {elapsed_time:.2f} 秒")
-    print("="*50)
+    print("="*60)
