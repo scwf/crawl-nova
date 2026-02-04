@@ -10,6 +10,7 @@ rss_crawler.py - RSS 订阅抓取工具
 import os
 import json
 import time
+import random
 import configparser
 import feedparser
 from datetime import datetime, timezone
@@ -411,8 +412,28 @@ if __name__ == "__main__":
     
     # ========== 阶段 1: 串行抓取所有 RSS 源 ==========
     all_posts = []
+    last_x_request_time = 0  # 记录上次 X 请求时间
+    # X 源请求延迟范围（秒），随机化避免被检测为机器人
+    X_DELAY_MIN = config.getint('crawler', 'x_request_delay_min', fallback=3)
+    X_DELAY_MAX = config.getint('crawler', 'x_request_delay_max', fallback=8)
+    
     for category, name, url in sources_list:
+        # 对 X (Twitter) 类型添加随机延迟，避免触发流控
+        if category == "X" and last_x_request_time > 0:
+            elapsed = time.time() - last_x_request_time
+            # 每次生成随机延迟，更自然
+            delay = random.uniform(X_DELAY_MIN, X_DELAY_MAX)
+            if elapsed < delay:
+                sleep_time = delay - elapsed
+                logger.info(f"⏳ 等待 {sleep_time:.1f}s 避免 X 流控...")
+                time.sleep(sleep_time)
+        
         posts = fetch_recent_posts(url, DAYS_LOOKBACK, source_type=category, name=name)
+        
+        # 在 fetch 完成后记录时间，确保间隔计算准确
+        if category == "X":
+            last_x_request_time = time.time()
+        
         if posts:
             logger.info(f"-> [{name}] 获取 {len(posts)} 条")
             all_posts.extend(posts)
