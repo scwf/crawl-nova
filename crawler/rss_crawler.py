@@ -199,9 +199,82 @@ def _save_raw_backup(posts, source_type, name):
         logger.info(f"备份失败: {e}")
 
 
+def _enrich_single_post(post):
+    """
+    对单个帖子进行内容增强（用于并行执行）
+    
+    根据 source_type 执行相应的增强操作：
+    - X: 提取嵌入链接内容
+    - YouTube: 提取视频字幕
+    
+    返回:
+        post: 增强后的帖子（原地修改）
+    """
+    source_type = post.get('source_type', '')
+    title = post.get('title', '')
+    
+    try:
+        if source_type == "X":
+            content = post.get('content', '')
+            extra_content, extra_urls = _enrich_x_content(content, title)
+            post['extra_content'] = extra_content
+            post['extra_urls'] = extra_urls
+        elif source_type == "YouTube":
+            link = post.get('link', '')
+            content = post.get('content', '')
+            extra_content = _enrich_youtube_content(link, title, content)
+            post['extra_content'] = extra_content
+    except Exception as e:
+        t = title[:30] + "..." if len(title) > 30 else title
+        logger.info(f"[{t}] 内容增强失败: {e}")
+    
+    return post
+
+
+def enrich_posts_parallel(posts, max_workers=5):
+    """
+    批量并行增强帖子内容
+    
+    参数:
+        posts: 待增强的帖子列表
+        max_workers: 并发数（默认 5）
+    
+    返回:
+        增强后的帖子列表
+    """
+    # 筛选需要增强的帖子（X 和 YouTube）
+    posts_to_enrich = [p for p in posts if p.get('source_type') in ('X', 'YouTube')]
+    
+    if not posts_to_enrich:
+        logger.info("没有需要内容增强的帖子")
+        return posts
+    
+    logger.info(f"🔄 开始并行内容增强，共 {len(posts_to_enrich)} 篇...")
+    start_time = time.time()
+    
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(_enrich_single_post, p): p for p in posts_to_enrich}
+        
+        completed = 0
+        for future in as_completed(futures):
+            completed += 1
+            try:
+                future.result()  # 结果已原地修改到 post 中
+            except Exception as e:
+                logger.error(f"内容增强任务异常: {e}")
+            
+            if completed % 5 == 0:
+                logger.info(f"内容增强进度: {completed}/{len(posts_to_enrich)}")
+    
+    elapsed = time.time() - start_time
+    logger.info(f"✅ 内容增强完成，耗时: {elapsed:.2f}s")
+    
+    return posts
+
+
 def fetch_recent_posts(rss_url, days, source_type="未知", name="", save_raw=True):
     """
-    抓取 RSS 并筛选指定天数内的内容
+    抓取 RSS 并筛选指定天数内的内容（仅抓取基础数据，不做内容增强）
     
     参数：
         rss_url: RSS 源地址
@@ -209,6 +282,8 @@ def fetch_recent_posts(rss_url, days, source_type="未知", name="", save_raw=Tr
         source_type: 来源类型（微信公众号、X (Twitter)、YouTube、博客/新闻等）
         name: 源名称
         save_raw: 是否保存原始数据为 JSON 备份文件
+    
+    注意：内容增强（X 嵌入链接、YouTube 字幕）将在后续阶段并行执行
     """
     logger.info(f"正在抓取 [{source_type}] {name}: {rss_url} ...")
     try:
@@ -230,27 +305,22 @@ def fetch_recent_posts(rss_url, days, source_type="未知", name="", save_raw=Tr
             if not post_date or (now - post_date).days > days:
                 continue
 
-            # 2. 基础内容提取
+            # 2. 基础内容提取（不做内容增强）
             content = entry.get('content', '') or entry.get('description', '')
-            extra_content, extra_urls = '', []
 
             logger.info(f"标题: {entry.title}")
 
-            # 3. 内容增强 (X/YouTube)
-            if source_type == "X":
-                extra_content, extra_urls = _enrich_x_content(content, entry.title)
-            elif source_type == "YouTube":
-                extra_content = _enrich_youtube_content(entry.link, entry.title, content)
-
+            # 内容增强字段留空，后续并行填充
             recent_posts.append({
                 "title": entry.title,
                 "date": post_date.strftime("%Y-%m-%d"),
                 "link": entry.link,
                 "rss_url": rss_url,
                 "source_type": source_type,
+                "source_name": name,
                 "content": content,
-                "extra_content": extra_content,
-                "extra_urls": extra_urls
+                "extra_content": "",   # 延迟填充
+                "extra_urls": []       # 延迟填充
             })
         
         # 保存备份
@@ -333,31 +403,39 @@ if __name__ == "__main__":
         for name, url in sources.items()
     ]
     
-    logger.info(f"🚀 开始处理 {len(sources_list)} 个订阅源 (顺序抓取 -> 并行整理)...")
+    ENRICH_WORKERS = config.getint('crawler', 'enrich_workers', fallback=5)
+    
+    logger.info(f"🚀 开始处理 {len(sources_list)} 个订阅源 (串行抓取 -> 并行增强 -> 并行整理)...")
     
     all_organized_posts = []
     
+    # ========== 阶段 1: 串行抓取所有 RSS 源 ==========
+    all_posts = []
+    for category, name, url in sources_list:
+        posts = fetch_recent_posts(url, DAYS_LOOKBACK, source_type=category, name=name)
+        if posts:
+            logger.info(f"-> [{name}] 获取 {len(posts)} 条")
+            all_posts.extend(posts)
+    
+    logger.info(f"共获取 {len(all_posts)} 篇文章")
+    
+    # ========== 阶段 2: 并行内容增强 ==========
+    enrich_posts_parallel(all_posts, max_workers=ENRICH_WORKERS)
+    
+    # ========== 阶段 3: 并行 LLM 整理 ==========
+    logger.info(f"开始并行 LLM 整理...")
+    
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        # 2. 串行抓取所有源
-        all_posts = []
-        for category, name, url in sources_list:
-            posts = fetch_recent_posts(url, DAYS_LOOKBACK, source_type=category, name=name)
-            if posts:
-                logger.info(f"-> [{name}] 获取 {len(posts)} 条")
-                all_posts.extend((post, name) for post in posts)
-        
-        logger.info(f"共获取 {len(all_posts)} 篇文章，提交并行整理...")
-        
-        # 3. 并行整理（每篇文章一个任务）
+        # 准备任务（需要 source_name）
         futures = {
-            executor.submit(organize_single_post, post, name): (post, name)
-            for post, name in all_posts
+            executor.submit(organize_single_post, post, post.get('source_name', '')): post
+            for post in all_posts
         }
         
         # 4. 获取结果 & 即时写入
         completed = 0
         for future in as_completed(futures):
-            post, name = futures[future]
+            post = futures[future]
             completed += 1
             try:
                 result = future.result()
@@ -365,6 +443,7 @@ if __name__ == "__main__":
                     all_organized_posts.append(result)
                     write_post_file(result)  # 即时写入
             except Exception as e:
+                name = post.get('source_name', '未知')
                 logger.error(f"❌ [{name}] 整理失败: {e}")
             
             if completed % 10 == 0:
