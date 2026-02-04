@@ -22,6 +22,9 @@ from common import organize_single_post, group_posts_by_domain, save_batch_manif
 logger = setup_logger("rss_crawler")
 from content_fetcher import ContentFetcher
 
+# 批次时间戳（模块加载时生成，确保同一次运行使用相同时间戳）
+BATCH_TIMESTAMP = datetime.now().strftime('%Y%m%d_%H%M%S')
+
 # ================= 配置加载 =================
 # 加载配置文件 (config.ini，位于项目根目录)
 config = configparser.ConfigParser()
@@ -190,10 +193,11 @@ def _save_raw_backup(posts, source_type, name):
     """保存原始数据备份"""
     if not posts: return
     try:
-        raw_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'raw')
+        # 使用全局批次时间戳，确保同一次运行保存到同一目录
+        raw_dir = os.path.join(os.path.dirname(__file__), '..', 'data', f'raw_{BATCH_TIMESTAMP}')
         os.makedirs(raw_dir, exist_ok=True)
         safe_name = "".join(c if c.isalnum() or c in '-_' else '_' for c in name)
-        filename = f"{source_type}_{safe_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        filename = f"{source_type}_{safe_name}.json"
         
         with open(os.path.join(raw_dir, filename), 'w', encoding='utf-8') as f:
             json.dump(posts, f, ensure_ascii=False, indent=2)
@@ -352,7 +356,6 @@ if __name__ == "__main__":
     
     # 准备输出目录
     output_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     os.makedirs(output_dir, exist_ok=True)
     
     # 用于追踪已创建的领域目录 
@@ -372,7 +375,7 @@ if __name__ == "__main__":
         """获取领域目录路径，不存在则创建（包含 high/pending/excluded 三个子目录）"""
         if domain not in domain_dirs:
             safe_domain = "".join(c if c.isalnum() or c in ('-', '_') else '_' for c in domain)
-            dir_name = f"{safe_domain}_{timestamp}"
+            dir_name = f"{safe_domain}_{BATCH_TIMESTAMP}"
             dir_path = os.path.join(output_dir, dir_name)
             
             # 创建领域主目录和三个子目录
@@ -492,7 +495,7 @@ if __name__ == "__main__":
     domain_report_dirs = {domain: info['name'] for domain, info in domain_dirs.items()}
     save_batch_manifest(
         output_dir=output_dir,
-        batch_id=timestamp,
+        batch_id=BATCH_TIMESTAMP,
         domain_reports=domain_report_dirs,
         stats={
             "total_posts": len(all_organized_posts),
