@@ -85,6 +85,9 @@ def _load_sources(config):
 
 
 if __name__ == "__main__":
+    import ray
+    # ray.init(address=None, num_cpus=10, ignore_reinit_error=True)
+    # daft.set_runner_ray(noop_if_initialized=True)
     daft.set_runner_native()
     start_time = time.time()
     batch_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
