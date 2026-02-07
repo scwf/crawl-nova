@@ -2,7 +2,7 @@
 
 ## User Experience & Interaction (用户体验与交互)
 
-- [ ] **Configurable Prompts (Prompt 模版化与配置)**
+- [x] **Configurable Prompts (Prompt 模版化与配置)**
   - **目前的状况**: Prompt 硬编码在 `llm_organizer.py` 中。
   - **改进方案**: 将 Prompt 提取到外部文件（如 `prompts/organizer_prompt.md`）或配置文件中。这样用户可以在不修改代码的情况下，调整 AI 的“人设”或关注点（比如从“AI技术专家”改为“投资分析师”）。
 
@@ -57,3 +57,9 @@
 - [ ] **Content Repurposing Agent (一键内容转写)**
   - **痛点**: 看完情报后，需要手动再创作才能分享。
   - **功能**: 提供“转写”指令，将选中的情报转化为不同平台的内容（如“基于这三条新闻写一篇 LinkedIn 深度评论”或“生成 Twitter Thread”）。
+
+## Delivery & Notification (交付与触达)
+
+- [ ] **Multi-Channel Dispatch (多渠道分发)**
+  - **痛点**: 用户必须主动打开文件查看，缺乏即时性。
+  - **功能**: 将最终生成的报告通过 Email (HTML 格式)、Slack Webhook、Discord Bot 或飞书机器人推送到用户的终端。

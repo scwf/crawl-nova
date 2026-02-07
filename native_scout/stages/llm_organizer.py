@@ -3,71 +3,56 @@ llm_organizer.py - OrganizerStage for Native Python Pipeline.
 """
 import json
 import time
+import os
 from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
-
 from openai import OpenAI
-
 from common import setup_logger, _tid
 
 logger = setup_logger("llm_organizer")
 
-def organize_single_post(post, llm_client, llm_config, max_retries=3, retry_delay=3):
+def organize_single_post(post, prompt_template, llm_client, llm_config, max_retries=3, retry_delay=3):
     """
     调用 LLM 对单篇文章进行标准化整理，返回 JSON 结构化数据
     
     参数:
         post: dict - 文章数据
+        prompt_template: str - 提示词模板
         max_retries: int - 最大重试次数 (默认 3)
         retry_delay: int - 重试间隔秒数 (默认 3)
     
     返回:
         dict: 包含 date, event, key_info, link, detail, category, domain, source_name 等字段
     """
+    if not prompt_template:
+        logger.error(f"❌ [Prompt-Missing] No prompt template provided for {post.get('link', 'unknown')}")
+        return None
+
     content = post['content']
     
-    prompt = f"""
-你是一位资深的 Data & AI 领域情报分析专家，拥有 10 年行业经验。
-你的专长包括：大模型技术、AI/数据平台框架、智能体应用、行业AI落地。
-你的任务是对原始信息进行结构化整理，整理后的数据将用于Data & AI产品分析、行业洞察和决策支持。
+    # 2. Prepare Context
+    context = {
+        'title': post.get('title', ''),
+        'date': post.get('date', ''),
+        'link': post.get('link', ''),
+        'source_type': post.get('source_type', ''),
+        'source_name': post.get('source_name', ''),  # Added for potential prompt usage
+        'content': post.get('content', ''),
+        'extra_content': post.get('extra_content', ''),
+        'extra_urls': post.get('extra_urls', [])     # List of strings
+    }
+    
+    # 3. Format Prompt
+    try:
+        prompt = prompt_template.format(**context)
+    except KeyError as e:
+        logger.error(f"Prompt format error: missing key {e}. Check your prompt template.")
+        return None
 
-请对以下来自【{post['source_type']}】的文章进行标准化整理，输出为 JSON 格式。
-
-请严格按照以下 JSON 格式输出：
-
-EXAMPLE JSON OUTPUT:
-{{
-    "event": "OpenAI发布GPT-5",
-    "key_info": "1. 支持多模态<br>2. 上下文100万tokens",
-    "detail": "OpenAI宣布发布GPT-5，这是迄今为止最强大的语言模型...",
-    "category": "技术发布",
-    "domain": "大模型技术和产品",
-    "quality_score": 5,
-    "quality_reason": "重大产品发布，包含关键技术参数"
-}}
-
-各字段说明：
-- **event**: 简练概括发生了什么（标题/核心动作），在原始标题足够描述事件的情况下尽可能重用原始标题来描述事件
-- **key_info**: 提取 1-5 点核心细节，用 <br> 分隔，作为一段字符串
-- **detail**: 若原文是X的推文，则保留原始推文内容；若原文不长且可读性良好也直接输出原文；其他情况则对原始内容进行格式优化（比如去掉HTML标签），结构化整理输出为一段对原文的详细描述，要求尽可能把原文的脉络梳理清楚，不要过于概括和简略
-- **category**: 事件分类标签，从以下选择一个：技术发布、产品动态、观点分享、商业资讯、技术活动、客户案例、广告招聘、其他
-- **domain**: 所属领域标签，必须从以下选择一个：大模型技术和产品、数据平台和框架、AI平台和框架、智能体平台和框架、代码智能体（IDE）、数据智能体、行业或领域智能体、具身智能、其他
-- **quality_score**: 内容质量评分(1-5分)，评分标准：
-  - 5分(高价值): 有重要数据、深度洞察、独家信息、重大事件发布
-  - 4分(值得关注): 有实质内容、有参考价值、值得跟进
-  - 3分(一般): 信息一般、可作为背景参考
-  - 2分(价值有限): 内容单薄、缺乏深度、信息密度低
-  - 1分(无价值): 无实质内容、纯营销广告、完全不相关
-- **quality_reason**: 简短说明评分理由
-
-原始数据：
-标题: {post['title']}
-时间: {post['date']}
-原文链接: {post['link']}
-来源类型: {post['source_type']}
-内容: {content}
-补充内容: {post.get('extra_content', '')}
-"""
+    # Fallback if file load failed or format failed
+    if not prompt:
+        logger.error(f"❌ [Prompt-Fail] Could not load or format prompt for {post['link']}")
+        return None
 
     # 带重试机制的 API 调用
     result_text = None
@@ -121,7 +106,7 @@ EXAMPLE JSON OUTPUT:
         logger.error(f"❌ [JSON-Fail] {result_text}")
         return None
 
-    # 补全基础字段 (减少LLM输出)
+    # 补全基础字段
     result['date'] = post.get('date', '')
     result['link'] = post.get('link', '')
     result['source_name'] = post.get('source_name', '')
@@ -146,9 +131,36 @@ class OrganizerStage:
             base_url=self.config.get('llm', 'base_url'),
         )
         
+        # Load prompt template once during initialization
+        self.prompt_template = self._load_prompt_template()
+        
         self.max_workers = config.getint('crawler', 'organize_workers', fallback=5)
         self.pool = ThreadPoolExecutor(max_workers=self.max_workers, thread_name_prefix="Organizer")
         self.futures = []
+
+    def _load_prompt_template(self):
+        """Load prompt template from file."""
+        try:
+            config_path = self.config.get('llm', 'prompt_template', fallback='prompts/organizer_prompt.md')
+            
+            # Resolve path
+            target_path = config_path
+            if not os.path.isabs(config_path):
+                 # Resolve relative to project root (assuming native_scout/stages is CWD or handled by pipeline pathing logic?)
+                 # Better to rely on __file__ relative path anchor
+                 project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+                 target_path = os.path.join(project_root, config_path)
+            
+            if os.path.exists(target_path):
+                with open(target_path, 'r', encoding='utf-8') as f:
+                    logger.info(f"Loaded prompt template from {target_path}")
+                    return f.read()
+            else:
+                logger.error(f"❌ Prompt file not found at {target_path}")
+                return ""
+        except Exception as e:
+            logger.error(f"❌ Failed to load prompt template: {e}")
+            return ""
 
     def start(self):
         """Start consumer workers."""
@@ -182,6 +194,7 @@ class OrganizerStage:
                     
                 result = organize_single_post(
                     post,
+                    prompt_template=self.prompt_template,
                     llm_client=self.client,
                     llm_config=self.config,
                 )
