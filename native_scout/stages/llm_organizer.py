@@ -12,19 +12,17 @@ from common import setup_logger, _tid
 
 logger = setup_logger("llm_organizer")
 
-def organize_single_post(post, source_name, llm_client, llm_config, max_retries=3, retry_delay=3):
+def organize_single_post(post, llm_client, llm_config, max_retries=3, retry_delay=3):
     """
     调用 LLM 对单篇文章进行标准化整理，返回 JSON 结构化数据
     
     参数:
         post: dict - 文章数据
-        source_name: str - 来源名称
         max_retries: int - 最大重试次数 (默认 3)
         retry_delay: int - 重试间隔秒数 (默认 3)
     
     返回:
-        dict: 包含 date, event, key_info, link, detail, category, domain, source_name 字段
-        None: 如果是纯广告或无实质内容
+        dict: 包含 date, event, key_info, link, detail, category, domain, source_name 等字段
     """
     content = post['content']
     
@@ -33,7 +31,7 @@ def organize_single_post(post, source_name, llm_client, llm_config, max_retries=
 你的专长包括：大模型技术、AI/数据平台框架、智能体应用、行业AI落地。
 你的任务是对原始信息进行结构化整理，整理后的数据将用于Data & AI产品分析、行业洞察和决策支持。
 
-请对以下来自【{source_name}】的文章进行标准化整理，输出为 JSON 格式。
+请对以下来自【{post['source_type']}】的文章进行标准化整理，输出为 JSON 格式。
 
 请严格按照以下 JSON 格式输出：
 
@@ -126,7 +124,8 @@ EXAMPLE JSON OUTPUT:
     # 补全基础字段 (减少LLM输出)
     result['date'] = post.get('date', '')
     result['link'] = post.get('link', '')
-    result['source_name'] = source_name
+    result['source_name'] = post.get('source_name', '')
+    result['source_type'] = post.get('source_type', '')
     
     # 添加 extra_content 和 extra_urls
     result['extra_content'] = post.get('extra_content', '')
@@ -177,16 +176,12 @@ class OrganizerStage:
                 break
             
             try:
-                # organize_single_post comes from local module now
-                source_name = post.get('source_name', 'Unknown')
-                
                 # If post is broken or somehow None (integrity check)
                 if not post:
                     continue
                     
                 result = organize_single_post(
                     post,
-                    source_name,
                     llm_client=self.client,
                     llm_config=self.config,
                 )
