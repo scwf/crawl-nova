@@ -10,7 +10,7 @@ from .resource_manager import ensure_executable, ensure_model
 import glob
 import json
 
-logger = setup_logger("core")
+logger = setup_logger("video-scribe")
 
 def try_download_youtube_subtitles(url: str, output_dir: str, lang: str = "en") -> Optional[str]:
     """
