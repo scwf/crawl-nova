@@ -35,7 +35,6 @@ def _shorten_url(url: str, length: int = 60) -> str:
     return url[:length] + "..." if len(url) > length else url
 
 
-
 class LinkExtractor:
     """从文本中提取和分类URL"""
     
@@ -132,6 +131,9 @@ class GenericVideoFetcher:
         '/tweet_video/',  # Twitter GIF -> MP4
     ]
     
+    def __init__(self, batch_timestamp: str = None):
+        self.batch_timestamp = batch_timestamp
+    
     def _is_likely_silent_video(self, url: str) -> bool:
         """检查URL是否可能是无声视频（如GIF转MP4）"""
         return any(pattern in url for pattern in self.SILENT_VIDEO_PATTERNS)
@@ -224,7 +226,7 @@ class GenericVideoFetcher:
             return get_hash(url)[:12]
 
     
-    def fetch_transcript(self, video_id: str, video_url: str, context: str = "", optimize: bool = False, batch_timestamp: str = None) -> str:
+    def fetch_transcript(self, video_id: str, video_url: str, context: str = "", optimize: bool = False) -> str:
         """
         获取视频字幕，并保存 srt/txt 到 raw 目录
         
@@ -233,7 +235,6 @@ class GenericVideoFetcher:
         参数:
             video_id: 视频ID (也是目录名)
             video_url: 视频可下载链接
-            batch_timestamp: 批次时间戳，用于归档 (None则用默认raw)
         
         返回:
             视频字幕文本
@@ -250,7 +251,7 @@ class GenericVideoFetcher:
             
         try:
             # 构造输出目录: data/raw_{timestamp}/{video_id}/
-            raw_dir_name = f"raw_{batch_timestamp}" if batch_timestamp else "raw"
+            raw_dir_name = f"raw_{self.batch_timestamp}" if self.batch_timestamp else "raw"
             output_dir = os.path.join(project_root, 'data', raw_dir_name, video_id)
             os.makedirs(output_dir, exist_ok=True)
             
@@ -315,7 +316,7 @@ class GenericVideoFetcher:
             traceback.print_exc()
             return ''
     
-    def fetch(self, url: str, context: str = "", title: str = "", optimize: bool = False, batch_timestamp: str = None) -> Optional[EmbeddedContent]:
+    def fetch(self, url: str, context: str = "", title: str = "", optimize: bool = False) -> Optional[EmbeddedContent]:
         """
         获取视频的完整信息
         
@@ -323,7 +324,6 @@ class GenericVideoFetcher:
             url: 视频URL
             context: 上下文信息
             title: 视频标题 (用于生成更有意义的文件名)
-            batch_timestamp: 批次时间戳
         返回:
             EmbeddedContent对象，如果无法提取则返回None
         """
@@ -349,7 +349,7 @@ class GenericVideoFetcher:
             logger.info(f"跳过静音视频（URL模式匹配）: {_shorten_url(url)}")
             return None
         
-        transcript = self.fetch_transcript(video_id, video_url, context=context, optimize=optimize, batch_timestamp=batch_timestamp)
+        transcript = self.fetch_transcript(video_id, video_url, context=context, optimize=optimize)
         
         return EmbeddedContent(
             url=url,
@@ -417,9 +417,9 @@ class ContentFetcher:
     """
     
     def __init__(self, batch_timestamp: str = None):
-        self.video_fetcher = GenericVideoFetcher()
-        self.blog_fetcher = BlogFetcher()
         self.batch_timestamp = batch_timestamp
+        self.video_fetcher = GenericVideoFetcher(batch_timestamp=batch_timestamp)
+        self.blog_fetcher = BlogFetcher()
     
     def fetch_embedded_content(self, text: str, title: str = "", optimize_video: bool = False) -> Tuple[List[EmbeddedContent], List[str]]:
         """
@@ -445,7 +445,7 @@ class ContentFetcher:
         for url in video_links:
             try:
                 logger.info(f"正在获取视频内容: {_shorten_url(url)}")
-                content = self.video_fetcher.fetch(url, title=title, context=text, optimize=optimize_video, batch_timestamp=self.batch_timestamp)
+                content = self.video_fetcher.fetch(url, title=title, context=text, optimize=optimize_video)
                 if content:
                     results.append(content)
             except Exception as e:
@@ -465,5 +465,12 @@ class ContentFetcher:
         all_urls = blog_links + video_links + media_urls
         
         return results, all_urls
+
+    def fetch_video(self, url: str, context: str = "", title: str = "", optimize: bool = False) -> Optional[EmbeddedContent]:
+        """
+        Explicit method to fetch a single video content (e.g. for YouTube enrichment).
+        Wraps the internal video_fetcher.
+        """
+        return self.video_fetcher.fetch(url, context=context, title=title, optimize=optimize)
     
 

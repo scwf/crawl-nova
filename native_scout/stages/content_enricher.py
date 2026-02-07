@@ -113,7 +113,7 @@ class EnricherStage:
         try:
             full_context = f"{title}\n{context}" if context else title
             enable_opt = self.config.getboolean('llm', 'enable_subtitle_optimization', fallback=False)
-            yt = self.content_fetcher.video_fetcher.fetch(
+            yt = self.content_fetcher.fetch_video(
                 link, context=full_context, title=title, optimize=enable_opt
             )
             if yt and yt.content:
