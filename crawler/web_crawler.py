@@ -20,7 +20,8 @@ import re
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from common import organize_data, setup_logger
+from common import setup_logger
+from stages.llm_organizer import organize_data
 
 logger = setup_logger("web_crawler")
 

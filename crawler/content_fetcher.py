@@ -163,6 +163,12 @@ class GenericVideoFetcher:
     def _extract_youtube_id(self, parsed, domain) -> Optional[str]:
         """辅助函数: 提取YouTube ID"""
         if not any(d in domain for d in ['youtube.com', 'youtu.be']):
+            logger.info(f"Skipping non-youtube page: {url}")
+            return None
+            
+        # 过滤非视频页面（直播大厅、频道页、用户页）
+        if any(x in parsed.path for x in ['/streams', '/live', '/channel/', '/c/', '/user/']):
+            logger.info(f"Skipping non-video page: {url}")
             return None
             
         try:
@@ -217,7 +223,8 @@ class GenericVideoFetcher:
             # 绝对兜底
             return get_hash(url)[:12]
 
-    def fetch_transcript(self, video_id: str, video_url: str, context: str = "", optimize: bool = False) -> str:
+    
+    def fetch_transcript(self, video_id: str, video_url: str, context: str = "", optimize: bool = False, batch_timestamp: str = None) -> str:
         """
         获取视频字幕，并保存 srt/txt 到 raw 目录
         
@@ -226,6 +233,7 @@ class GenericVideoFetcher:
         参数:
             video_id: 视频ID (也是目录名)
             video_url: 视频可下载链接
+            batch_timestamp: 批次时间戳，用于归档 (None则用默认raw)
         
         返回:
             视频字幕文本
@@ -241,8 +249,9 @@ class GenericVideoFetcher:
             sys.path.append(project_root)
             
         try:
-            # 构造输出目录: data/raw/{video_id}/
-            output_dir = os.path.join(project_root, 'data', 'raw', video_id)
+            # 构造输出目录: data/raw_{timestamp}/{video_id}/
+            raw_dir_name = f"raw_{batch_timestamp}" if batch_timestamp else "raw"
+            output_dir = os.path.join(project_root, 'data', raw_dir_name, video_id)
             os.makedirs(output_dir, exist_ok=True)
             
             logger.info(f"开始转录视频 [ID: {video_id}] -> {output_dir}")
@@ -306,7 +315,7 @@ class GenericVideoFetcher:
             traceback.print_exc()
             return ''
     
-    def fetch(self, url: str, context: str = "", title: str = "", optimize: bool = False) -> Optional[EmbeddedContent]:
+    def fetch(self, url: str, context: str = "", title: str = "", optimize: bool = False, batch_timestamp: str = None) -> Optional[EmbeddedContent]:
         """
         获取视频的完整信息
         
@@ -314,6 +323,7 @@ class GenericVideoFetcher:
             url: 视频URL
             context: 上下文信息
             title: 视频标题 (用于生成更有意义的文件名)
+            batch_timestamp: 批次时间戳
         返回:
             EmbeddedContent对象，如果无法提取则返回None
         """
@@ -339,7 +349,7 @@ class GenericVideoFetcher:
             logger.info(f"跳过静音视频（URL模式匹配）: {_shorten_url(url)}")
             return None
         
-        transcript = self.fetch_transcript(video_id, video_url, context=context, optimize=optimize)
+        transcript = self.fetch_transcript(video_id, video_url, context=context, optimize=optimize, batch_timestamp=batch_timestamp)
         
         return EmbeddedContent(
             url=url,
@@ -406,9 +416,10 @@ class ContentFetcher:
     提供简洁的API，隐藏内部的链接提取和分类爬取逻辑
     """
     
-    def __init__(self):
+    def __init__(self, batch_timestamp: str = None):
         self.video_fetcher = GenericVideoFetcher()
         self.blog_fetcher = BlogFetcher()
+        self.batch_timestamp = batch_timestamp
     
     def fetch_embedded_content(self, text: str, title: str = "", optimize_video: bool = False) -> Tuple[List[EmbeddedContent], List[str]]:
         """
@@ -434,7 +445,7 @@ class ContentFetcher:
         for url in video_links:
             try:
                 logger.info(f"正在获取视频内容: {_shorten_url(url)}")
-                content = self.video_fetcher.fetch(url, title=title, context=text, optimize=optimize_video)
+                content = self.video_fetcher.fetch(url, title=title, context=text, optimize=optimize_video, batch_timestamp=self.batch_timestamp)
                 if content:
                     results.append(content)
             except Exception as e:

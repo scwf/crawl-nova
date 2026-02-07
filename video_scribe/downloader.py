@@ -23,10 +23,16 @@ def download_audio(url: str, output_dir: str) -> str:
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         logger.info(f"Downloading audio from {url}...")
-        info = ydl.extract_info(url, download=True)
-        filename = ydl.prepare_filename(info)
-        # yt-dlp with postprocessor changes extension
-        final_filename = Path(filename).with_suffix('.wav')
-        
-    logger.info(f"Downloaded to {final_filename}")
-    return str(final_filename)
+        try:
+            info = ydl.extract_info(url, download=True)
+            filename = ydl.prepare_filename(info)
+            # yt-dlp with postprocessor changes extension
+            final_filename = Path(filename).with_suffix('.wav')
+            logger.info(f"Downloaded to {final_filename}")
+            return str(final_filename)
+        except yt_dlp.utils.DownloadError as e:
+            err_msg = str(e).lower()
+            if "live event" in err_msg or "begin in" in err_msg or "premiere" in err_msg:
+                logger.warning(f"Skipping upcoming live event: {url}")
+                return None
+            raise e
