@@ -162,13 +162,14 @@ class GenericVideoFetcher:
 
     def _extract_youtube_id(self, parsed, domain) -> Optional[str]:
         """辅助函数: 提取YouTube ID"""
+        current_url = parsed.geturl()
         if not any(d in domain for d in ['youtube.com', 'youtu.be']):
-            logger.info(f"Skipping non-youtube page: {url}")
+            logger.info(f"Skipping non-youtube page: {current_url}")
             return None
             
         # 过滤非视频页面（直播大厅、频道页、用户页）
         if any(x in parsed.path for x in ['/streams', '/live', '/channel/', '/c/', '/user/']):
-            logger.info(f"Skipping non-video page: {url}")
+            logger.info(f"Skipping non-video page: {current_url}")
             return None
             
         try:

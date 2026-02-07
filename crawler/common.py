@@ -7,7 +7,7 @@ import configparser
 from urllib.parse import urlparse
 from datetime import datetime
 import threading
-from openai import OpenAI
+
 
 # 时间范围配置,爬取最近多少天的内容
 DAYS_LOOKBACK = 7
@@ -36,12 +36,6 @@ def _tid():
 # 加载配置文件 (config.ini，位于项目根目录)
 config = configparser.ConfigParser()
 config.read(os.path.join(os.path.dirname(__file__), '..', 'config.ini'), encoding='utf-8')
-
-# 设置 LLM API (从 config.ini 配置文件读取)
-client = OpenAI(
-    api_key=config.get('llm', 'api_key'), 
-    base_url=config.get('llm', 'base_url')
-)
 
 # ================= 批次清单管理 =================
 

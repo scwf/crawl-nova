@@ -6,9 +6,11 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
 
-from common import logger, client, config, _tid
+from openai import OpenAI
 
-def organize_single_post(post, source_name, max_retries=3, retry_delay=3):
+from common import logger, _tid
+
+def organize_single_post(post, source_name, llm_client, llm_config, max_retries=3, retry_delay=3):
     """
     调用 LLM 对单篇文章进行标准化整理，返回 JSON 结构化数据
     
@@ -75,8 +77,8 @@ EXAMPLE JSON OUTPUT:
     
     for attempt in range(max_retries + 1):
         try:
-            response = client.chat.completions.create(
-                model=config.get('llm', 'model'),
+            response = llm_client.chat.completions.create(
+                model=llm_config.get('llm', 'model'),
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant for data organization. Output only valid JSON, no extra text."},
                     {"role": "user", "content": prompt}
@@ -133,35 +135,15 @@ EXAMPLE JSON OUTPUT:
     
     return result
 
-def organize_data(posts, source_name):
-    """
-    调用 LLM 对信息进行标准化整理 (逐篇串行处理)
-    """
-    if not posts:
-        return []
-    
-    # 逐篇处理
-    organized_posts = []
-    for idx, post in enumerate(posts):
-        logger.info(f"正在整理 [{source_name}] 第 {idx+1}/{len(posts)} 篇: {post['title'][:30]}...")
-        try:
-            result = organize_single_post(post, source_name)
-            if not result:
-                logger.info(f"跳过（LLM返回空或无实质内容）")
-                continue
-            organized_posts.append(result)
-        except Exception as e:
-            logger.info(f"整理失败: {e}")
-            continue
-    
-    return organized_posts
-
-
 class OrganizerStage:
-    def __init__(self, enrich_queue: Queue, write_queue: Queue, config):
+    def __init__(self, enrich_queue: Queue, organize_queue: Queue, config):
         self.enrich_queue = enrich_queue
-        self.write_queue = write_queue
+        self.organize_queue = organize_queue
         self.config = config
+        self.client = OpenAI(
+            api_key=self.config.get('llm', 'api_key'),
+            base_url=self.config.get('llm', 'base_url'),
+        )
         
         self.max_workers = config.getint('crawler', 'organize_workers', fallback=5)
         self.pool = ThreadPoolExecutor(max_workers=self.max_workers, thread_name_prefix="Organizer")
@@ -169,7 +151,7 @@ class OrganizerStage:
 
     def start(self):
         """Start consumer workers."""
-        logger.info(f"🚀 Starting OrganizerStage with {self.max_workers} workers...")
+        logger.info(f"Starting OrganizerStage with {self.max_workers} workers...")
         for _ in range(self.max_workers):
             self.futures.append(
                 self.pool.submit(self._worker_loop)
@@ -182,7 +164,7 @@ class OrganizerStage:
             self.enrich_queue.put(None)
         
         self.pool.shutdown(wait=True)
-        logger.info("✅ OrganizerStage stopped.")
+        logger.info("OrganizerStage stopped.")
 
     def _worker_loop(self):
         while True:
@@ -200,10 +182,15 @@ class OrganizerStage:
                 if not post:
                     continue
                     
-                result = organize_single_post(post, source_name)
+                result = organize_single_post(
+                    post,
+                    source_name,
+                    llm_client=self.client,
+                    llm_config=self.config,
+                )
                 
                 if result:
-                    self.write_queue.put(result)
+                    self.organize_queue.put(result)
                 else:
                     # Logic: if None returned, it means skip (ad or empty)
                     pass

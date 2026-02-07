@@ -22,7 +22,7 @@ class FetcherStage:
         
         # Pool for Weixin/YouTube (Parallel)
         self.general_workers = 5
-        self.general_pool = ThreadPoolExecutor(max_workers=self.general_workers, thread_name_prefix="GeneralFetcher")
+        self.general_pool = ThreadPoolExecutor(max_workers=self.general_workers, thread_name_prefix="Weixin+YouTubeFetcher")
         
         # Pool for X/Twitter (Restricted Serial)
         # Still use ThreadPoolExecutor for consistency and extensibility
@@ -36,7 +36,7 @@ class FetcherStage:
         Start fetching tasks.
         rss_sources: dict like {"weixin": {...}, "X": {...}, "YouTube": {...}}
         """
-        logger.info("🚀 Starting FetcherStage...")
+        logger.info("Starting FetcherStage...")
         
         # Flatten sources into a list of tasks
         # Task format: (category, name, url)
@@ -77,7 +77,7 @@ class FetcherStage:
         
         self.general_pool.shutdown(wait=True)
         self.restricted_pool.shutdown(wait=True)
-        logger.info("✅ FetcherStage finished.")
+        logger.info("FetcherStage finished.")
 
     def _fetch_x_task(self, rss_url, source_type, name):
         """Wrapper for X tasks to add random delay."""
@@ -85,16 +85,11 @@ class FetcherStage:
         delay_min = self.config.getint('crawler', 'x_request_delay_min', fallback=30)
         delay_max = self.config.getint('crawler', 'x_request_delay_max', fallback=60)
         
-        # Sleep before fetch (simulating gap between requests)
-        # Note: Since pool size is 1, this effectively delays the NEXT task if we sleep at the end,
-        # or delays THIS task if we sleep at the start. 
-        # Sleeping at main loop is better? 
-        # In a pool of 1, tasks execute sequentially. 
-        # Task A runs -> Sleep -> Fetch -> Finish. Task B runs -> Sleep -> Fetch.
-        # This achieves the "Sleep between fetches" effect.
-        
+        # Introduce a random delay to mitigate X (Twitter) rate limiting.
+        # Since restricted_pool has max_workers=1, tasks execute sequentially;
+        # sleeping at the start of each task ensures a mandatory gap between requests.
         sleep_time = random.uniform(delay_min, delay_max)
-        logger.info(f"⏳ Waiting {sleep_time:.1f}s for X request...")
+        logger.info(f"Waiting {sleep_time:.1f}s for X request...")
         time.sleep(sleep_time)
         
         self._fetch_task(rss_url, source_type, name)

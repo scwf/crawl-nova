@@ -4,6 +4,7 @@ result_writer.py - WriterStage for Native Python Pipeline.
 import os
 import time
 import threading
+import hashlib
 from queue import Queue
 from datetime import datetime
 
@@ -29,8 +30,8 @@ def group_posts_by_domain(all_posts):
 
 
 class WriterStage:
-    def __init__(self, write_queue: Queue, output_dir, batch_timestamp):
-        self.write_queue = write_queue
+    def __init__(self, organize_queue: Queue, output_dir, batch_timestamp):
+        self.organize_queue = organize_queue
         self.output_dir = output_dir
         self.batch_timestamp = batch_timestamp
         
@@ -42,23 +43,23 @@ class WriterStage:
         self.total_posts = 0
 
     def start(self):
-        logger.info("🚀 Starting WriterStage...")
+        logger.info("Starting WriterStage...")
         self.thread = threading.Thread(target=self._worker_loop, name="WriterThread")
         self.thread.start()
 
     def stop(self):
         logger.info("Stopping WriterStage... Sending poison pill.")
-        self.write_queue.put(None)
+        self.organize_queue.put(None)
         self.thread.join()
-        logger.info("✅ WriterStage stopped.")
+        logger.info("WriterStage stopped.")
 
     def _worker_loop(self):
         while True:
-            result = self.write_queue.get()
+            result = self.organize_queue.get()
             
             if result is None:
                 self._finalize_batch()
-                self.write_queue.task_done()
+                self.organize_queue.task_done()
                 break
             
             try:
@@ -67,7 +68,7 @@ class WriterStage:
             except Exception as e:
                 logger.error(f"Writer error: {e}")
             finally:
-                self.write_queue.task_done()
+                self.organize_queue.task_done()
 
     def _get_quality_tier(self, score):
         if score >= 4: return "high"
@@ -133,7 +134,9 @@ class WriterStage:
         tier = self._get_quality_tier(quality_score)
         
         safe_event = "".join(c if c.isalnum() or c in ('-', '_') else '_' for c in event)[:50]
-        filename = f"{safe_event}_{date_str}.md"
+        link = result.get('link', '')
+        unique_suffix = hashlib.md5(link.encode('utf-8')).hexdigest()[:8] if link else "nolink"
+        filename = f"{safe_event}_{date_str}_{unique_suffix}.md"
         filepath = os.path.join(domain_info['path'], tier, filename)
         
         md_content = self._generate_post_markdown(result, domain)
@@ -170,13 +173,13 @@ class WriterStage:
 
     def _print_summary(self, high, pending, excluded):
         print("\n" + "="*60)
-        print("📊 Execution Summary")
+        print("Execution Summary")
         print("="*60)
         print(f"Total Valid Posts: {self.total_posts}")
         print(f"\nQuality Distribution:")
-        print(f"  ⭐ High:     {high}")
-        print(f"  🔶 Pending:  {pending}")
-        print(f"  ⛔ Excluded: {excluded}")
+        print(f"  High:     {high}")
+        print(f"  Pending:  {pending}")
+        print(f"  Excluded: {excluded}")
         print(f"\nDomains:")
         for domain, info in self.domain_dirs.items():
             print(f"  - {domain}: {info['high']} H / {info['pending']} P / {info['excluded']} E")

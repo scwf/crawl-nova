@@ -15,15 +15,14 @@ class EnricherStage:
         self.config = config
         
         self.max_workers = config.getint('crawler', 'enrich_workers', fallback=5)
-        self.pool = ThreadPoolExecutor(max_workers=self.max_workers, thread_name_prefix="Enricher")
+        self.pool = ThreadPoolExecutor(max_workers=self.max_workers, thread_name_prefix="Content-Enricher")
         
-        # Instantiate ContentFetcher (Assuming thread-safe as per original rss_crawler usage)
         self.content_fetcher = ContentFetcher(batch_timestamp)
         self.futures = []
 
     def start(self):
         """Start consumer workers."""
-        logger.info(f"🚀 Starting EnricherStage with {self.max_workers} workers...")
+        logger.info(f"Starting EnricherStage with {self.max_workers} workers...")
         for _ in range(self.max_workers):
             self.futures.append(
                 self.pool.submit(self._worker_loop)
@@ -40,7 +39,7 @@ class EnricherStage:
             
         # Wait for workers
         self.pool.shutdown(wait=True)
-        logger.info("✅ EnricherStage stopped.")
+        logger.info("EnricherStage stopped.")
 
     def _worker_loop(self):
         while True:
@@ -105,7 +104,7 @@ class EnricherStage:
                 logger.info(f"[{t[:30]}] X Enrich: {len(embedded)} items, {len(extra_urls)} urls")
             return extra_content, extra_urls
         except Exception as e:
-            logger.warn(f"X enrich error: {e}")
+            logger.warning(f"X enrich error: {e}")
             return "", []
 
     def _enrich_youtube_content(self, link, title, context=""):
@@ -119,6 +118,6 @@ class EnricherStage:
                 logger.info(f"[{title[:30]}] YT Enrich: {len(yt.content)} chars")
                 return yt.content
         except Exception as e:
-            logger.warn(f"Youtube enrich error: {e}")
+            logger.warning(f"Youtube enrich error: {e}")
             pass
         return ""
